@@ -1,0 +1,279 @@
+# Assistente humano — manual do protótipo
+
+Botão animado de atendimento ("Tem um consultor humano disponível") feito em
+Next.js, Motion e Tailwind. Este documento registra o que o protótipo faz, como
+foi construído e o que ficou em aberto para a próxima fase (componente do
+atendente, CRM e incorporação no site).
+
+- **Demonstração:** https://erichprates.github.io/assistente_humano/
+- **Código do componente:** `components/contact-button.tsx`
+- **Página de demonstração:** `app/demo/demo-stage.tsx`
+
+> O que está aqui é um protótipo de interface. Nenhum dado é enviado a lugar
+> algum: os contatos digitados só aparecem no console do navegador.
+
+---
+
+## 1. O que o protótipo faz
+
+O fluxo completo, na ordem em que o visitante vê:
+
+| # | Etapa | O que acontece |
+|---|-------|----------------|
+| 1 | Espera | Nada aparece nos primeiros 4 segundos de página. |
+| 2 | Abertura | Surge um círculo branco com a foto do consultor de plantão; ele se expande e vira a pill escura com o texto "Tem um consultor humano disponível" e um ponto vermelho pulsando ("ao vivo"). |
+| 3 | Repouso | Depois de 1,5 s aparece o × de fechar no canto superior direito. Com o cursor perto, surge o chip com a foto e o nome do consultor. |
+| 4 | Hover | O texto sai inclinado, o ponto vermelho cresce e preenche a pill, entra "Falar agora!" e o círculo da seta. A pill encolhe para o tamanho do texto e fica centrada no cursor, acompanhando o mouse. A borda reage ao cursor como gelatina. |
+| 5 | Clique | A pill pergunta "Você já é cliente?" com os botões **Sim** e **Não**. |
+| 6a | Sim | A pill some e 8 avatares entram em cascata, com "Escolha seu consultor" em cima e o nome sob o avatar apontado. |
+| 6b | Não | Vai direto para o consultor de plantão. |
+| 7 | Mensagem | "Diego já vai te atender" (plantão) ou "Já vou tentar contato com o/a …" (outro consultor). Fica 2,2 s na tela. |
+| 8 | Contatos | Um campo por vez dentro da pill: nome, e-mail e WhatsApp. O contorno do avatar vai se preenchendo de vermelho como progresso. Campo inválido faz a pill balançar. |
+| 9 | Fim | A seta vira um ✓ e entra "Obrigado, {primeiro nome}!". |
+
+Em qualquer etapa:
+
+- **Fechar (×):** a pill recolhe até o círculo com a foto, que voa para o canto
+  inferior direito da tela e ganha uma bolinha vermelha de notificação.
+- **Reabrir:** clicar na bolinha faz o caminho inverso e **retoma de onde a
+  pessoa parou** (etapa, consultor escolhido e o que já foi digitado).
+- **Recolher sozinho:** no estado inicial, 5 s sem o cursor por perto fazem o
+  botão se fechar e ir para o canto.
+
+---
+
+## 2. Como rodar
+
+Requer Node 20 ou mais novo.
+
+```bash
+npm install
+npm run dev        # http://localhost:3000
+```
+
+A raiz (`/`) e `/demo` mostram a mesma demonstração: o botão sobre um print da
+página de estoque do site, usado só como fundo de simulação. O botão **Replay**
+recria o componente do zero (inclusive a espera de 4 s).
+
+`?zoom=4` no endereço amplia o botão; serve para inspecionar a animação quadro
+a quadro.
+
+### Publicar no GitHub Pages
+
+```bash
+npm run publish:pages
+```
+
+O script gera a versão estática (`out/`) com o prefixo `/assistente_humano` e
+envia para o branch `gh-pages`, que é o que o GitHub Pages serve. Detalhes em
+`scripts/publish-pages.sh`.
+
+---
+
+## 3. Como usar o componente
+
+```tsx
+import { ContactButton } from "@/components/contact-button";
+
+<ContactButton
+  label="Tem um consultor humano disponível"
+  hoverLabel="Falar agora!"
+  chipLabel="Diego"
+  onConsultant={(consultor, jaEhCliente) => { /* atendimento definido */ }}
+  onLead={(contatos, consultor) => { /* nome, e-mail e WhatsApp preenchidos */ }}
+  onClose={() => { /* minimizou */ }}
+/>
+```
+
+A largura da pill é medida a partir dos textos, então qualquer frase cabe.
+
+### Opções
+
+| Opção | Padrão | Para que serve |
+|-------|--------|----------------|
+| `label` | — | Texto em repouso. |
+| `hoverLabel` | — | Texto no hover. |
+| `chipLabel` | — | Texto do chip que aparece embaixo (nome do plantonista). |
+| `consultants` | lista com os 8 consultores | `{ name, avatar?, article?, color? }`. **O primeiro é o de plantão.** |
+| `intro` | `true` | Abre a partir do nada. |
+| `startDelayMs` | `4000` | Tempo de página antes da primeira aparição. |
+| `closable` | `true` | Mostra o ×. |
+| `minimize` | `true` | Ao fechar, vira a bolinha no canto; com `false`, some. |
+| `autoMinimizeMs` | `5000` | Recolhe sozinho após esse tempo parado (`0` desliga). |
+| `question`, `yesLabel`, `noLabel` | "Você já é cliente?", "Sim", "Não" | Textos da pergunta. |
+| `pickHint` | "Escolha seu consultor" | Texto acima dos avatares. |
+| `waitLabel(c)` | "{nome} já vai te atender" | Mensagem para o plantonista. |
+| `contactLabel(c)` | "Já vou tentar contato com o/a {nome}" | Mensagem para quem não está de plantão. |
+| `thanksLabel(nome)` | "Obrigado, {nome}!" | Mensagem final. |
+| `closeLabel` | "Fechar" | Texto do chip e rótulo acessível do ×. |
+| `onConsultant(c, cliente)` | — | Disparado quando o atendimento é definido. |
+| `onLead(contatos, c)` | — | Disparado ao concluir o formulário. |
+| `onClose()` | — | Disparado quando o botão minimiza (ou some). |
+
+Cor de destaque (`ACCENT`, hoje `#ff4b3e`) e cor escura (`INK`) são constantes
+no topo do arquivo do componente.
+
+---
+
+## 4. Como foi construído
+
+### 4.1 Ponto de partida: um vídeo de referência
+
+A animação de hover foi recriada a partir de um vídeo de 12 s (1600×1200,
+30 fps) de um botão "Get in touch → Don't be shy". O vídeo não está no
+repositório; o método foi:
+
+1. **Extrair os frames** com `ffmpeg` e montar folhas de contato, primeiro a
+   10 fps para entender a sequência, depois os trechos de transição quadro a
+   quadro (30 fps).
+2. **Medir** no próprio vídeo: geometria (altura 48 px, ponto de 10 px, círculo
+   da seta de 38 px, margens), cores e a posição de cada elemento em cada frame.
+3. **Implementar** e **gravar a própria versão** em Chrome headless na mesma
+   escala e no mesmo enquadramento do vídeo, a ~30 fps.
+4. **Comparar lado a lado** (original em cima, versão embaixo) e ajustar
+   atrasos e constantes das springs. Foram 7 rodadas até as duas sequências
+   baterem em cerca de 1 frame.
+
+O mesmo ciclo de gravar e conferir foi usado em todas as etapas criadas depois
+(abertura, fechar, conversa, formulário, voo da bolinha). Dois defeitos só
+apareceram assim: um texto "fantasma" que reacendia no meio do hover e a
+descida da bolinha, que teleportava em vez de voar.
+
+### 4.2 Decisões técnicas que definem a sensação
+
+**Nada é linear.** Todo movimento visível passa por uma spring.
+
+**Texto com balanço longo (a parte mais difícil de acertar).**
+No original o texto chega suave, mas continua balançando com amplitude pequena
+e período de ~0,3 s. Uma spring simples não reproduz isso: ou chega suave, ou
+balança. A solução foi ajustada numericamente contra as posições medidas nos
+frames: um *carrier* curto (0,32 s) leva o texto até o lugar e springs bem
+soltas (`stiffness 450, damping 6` para a posição; `320 / 7` para a rotação)
+perseguem esse carrier. O erro em relação às medições caiu para cerca de um
+quarto do melhor resultado com spring simples. A opacidade segue o carrier, e
+não a spring, para o balanço não reacender o texto que saiu.
+
+**Preenchimento que cresce a partir do ponto.**
+O ponto vermelho é um elemento que anima `top/right/width/height` até cobrir a
+pill. A altura usa uma spring mais rígida que a largura, porque no original ela
+fecha antes. Na saída o círculo da seta faz o mesmo e vira o fundo escuro.
+
+**Borda gelatinosa.**
+A pill não usa `border-radius`: o contorno é um `clip-path` gerado a cada
+quadro como polígono. Quando o cursor cruza a borda, os pontos próximos são
+deslocados (peso gaussiano em volta do ponto de contato) na direção do
+movimento do mouse, e uma spring solta devolve tudo ao lugar. Entrar empurra a
+borda para dentro; sair puxa para fora.
+
+**Área de clique separada do desenho.**
+Como a pill deforma, encolhe e segue o cursor, o elemento clicável é um botão
+transparente com a largura de repouso, por cima. Sem isso a pill fugiria do
+mouse e o hover ficaria piscando.
+
+**Largura por conteúdo.**
+Os textos são medidos depois de a fonte carregar; cada etapa tem sua largura e
+a pill anima de uma para outra. Textos longos giram menos, para a ponta subir o
+mesmo tanto que no original.
+
+**Abertura e fechamento são a mesma animação ao contrário.**
+O avatar do círculo encolhe exatamente até o lugar do ponto vermelho; ao fechar,
+o ponto vira a foto de novo.
+
+**Bolinha minimizada.**
+É um elemento `fixed` separado, renderizado em portal. Ele nasce exatamente
+sobre o círculo recolhido (posição e tamanho medidos na tela) e voa até o
+canto; na volta faz o inverso e a troca pelo círculo real acontece quando ele
+encosta de fato no destino.
+
+### 4.3 Estrutura do componente
+
+Tudo está em `components/contact-button.tsx`. Três máquinas de estado
+independentes controlam o que aparece:
+
+| Estado | Valores | Controla |
+|--------|---------|----------|
+| `intro` | `hidden → avatar → expand → done → collapse → vanish/closed` | Abertura, fechamento e minimização. |
+| `phase` | `idle → hover → leaving → reset → idle` | A animação de hover. |
+| `view` | `button → ask → pick → wait → form → done` | Em que etapa da conversa está. |
+
+Camadas, de baixo para cima:
+
+1. **Pele** — tudo que é visual e fica dentro da pill (fundo, preenchimentos,
+   textos), recortado pelo `clip-path` deformável.
+2. **Controles** — botões Sim/Não, avatares, campos do formulário e botão de
+   avançar; ficam por cima da pele e se movem junto com a pill.
+3. **Botão principal** — a área de clique estável.
+4. **×** — preso ao espaço do botão, não à pill que se move.
+5. **Bolinha minimizada** — em portal, fixa na tela.
+
+### 4.4 Tempos e constantes principais
+
+| O quê | Valor |
+|-------|-------|
+| Espera inicial | 4000 ms |
+| Círculo com avatar antes de expandir | 850 ms |
+| × aparece sozinho | 1500 ms após abrir |
+| Recolhe sozinho | 5000 ms sem interação |
+| Mensagem de quem atende | 2200 ms |
+| Saída do hover (pill escura cobre) | 510 ms |
+| Recolher ao fechar | 540 ms |
+| Spring de largura / seguir cursor | `stiffness 220, damping 21` |
+| Spring do preenchimento | `245 / 20` (altura: `400 / 28`) |
+| Spring do voo da bolinha | `190 / 24` (tamanho na descida: `230 / 17`) |
+
+Todas ficam no topo do arquivo, com comentário.
+
+### 4.5 Arquivos
+
+```
+app/
+  page.tsx               raiz: mostra a demonstração
+  demo/demo-stage.tsx    fundo simulado + botão Replay
+  layout.tsx             fonte Urbanist
+components/
+  contact-button.tsx     o componente inteiro
+lib/asset.ts             prefixo de caminho para o GitHub Pages
+public/
+  consultores/*.jpg      fotos recortadas (160×160)
+  site-estoque.jpg       print usado como fundo da simulação
+scripts/publish-pages.sh publicação no GitHub Pages
+```
+
+---
+
+## 5. O que é simulação e o que falta
+
+**Simulado nesta versão**
+
+- **Plantão:** o consultor de plantão é sempre o primeiro da lista (Diego). Não
+  há escala real.
+- **Envio dos dados:** `onLead` só escreve no console. Nada é gravado nem
+  enviado.
+- **Fundo:** é um print estático da página de estoque, não o site.
+- **Posição:** o botão está no centro da tela; a posição final no site ainda
+  não foi definida.
+
+**Limitações conhecidas**
+
+- Não há como voltar a uma etapa anterior (corrigir a resposta ou um campo já
+  preenchido); só fechando.
+- A conversa não é salva: recarregar a página recomeça do zero.
+- A bolinha minimizada pousa no canto inferior direito, onde o site hoje tem o
+  mascote. Os dois vão se sobrepor.
+- Validações simples: nome com 2+ letras, formato de e-mail, telefone com 10+
+  dígitos. Não há verificação real de e-mail ou número.
+- Não há aviso de privacidade (LGPD) no formulário.
+- Não foi testado em celular nem com leitor de tela. Os controles são botões e
+  campos reais, com rótulos, mas falta respeitar a preferência de "reduzir
+  movimento" do sistema.
+- A animação de hover não existe em telas de toque; lá o toque abre a pergunta.
+
+**Próxima fase (a detalhar)**
+
+- Componente do atendente, com mais funções.
+- Conexão com o CRM (destino dos contatos e do consultor escolhido).
+- Incorporação no site.
+- Escala real de plantão.
+
+Os pontos de encaixe já existem: `onConsultant`, `onLead` e `onClose` são onde
+essas integrações se ligam, e `consultants` é por onde a escala entra.
