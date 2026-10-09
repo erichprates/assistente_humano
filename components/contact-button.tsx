@@ -164,6 +164,9 @@ const MINI_LANDING = { type: "spring", stiffness: 230, damping: 17 } as const;
 const MINI_BACK_MS = 1400;
 // Tempo sem ninguém encostar no botão até ele se recolher sozinho.
 const AUTO_MINIMIZE_MS = 5000;
+// Celular: sem hover, o botão mostra o "Falar agora!" sozinho, uma vez.
+const PEEK_DELAY_MS = 1400;
+const PEEK_HOLD_MS = 2000;
 
 // Borda gelatinosa: folga em volta da pill para o contorno poder estufar,
 // largura da região afetada e resolução do contorno. PAD casa com -inset-3.
@@ -932,6 +935,34 @@ export function ContactButton({
     if (attendant) onLead?.(lead, attendant);
   };
 
+  // Celular: como não há hover, a animação acontece sozinha uma vez, pouco
+  // depois de o botão abrir, com a pill centrada no espaço de repouso.
+  const peeked = useRef(false);
+  const [peek, setPeek] = useState(false);
+  useEffect(() => {
+    if (!touch || !interactive || phase !== "idle" || peeked.current) return;
+    const id = setTimeout(() => {
+      peeked.current = true;
+      setPeek(true);
+    }, PEEK_DELAY_MS);
+    return () => clearTimeout(id);
+  }, [touch, interactive, phase]);
+  useEffect(() => {
+    if (!peek) return;
+    animate(offsetX, Math.max(0, (restW - hoverW) / 2), {
+      ...RESIZE,
+      delay: LAG_IN,
+    });
+    setPhase("hover");
+    const id = setTimeout(() => {
+      animate(offsetX, 0, RESIZE);
+      setPhase((p) => (p === "hover" ? "leaving" : p));
+      setPeek(false);
+    }, PEEK_HOLD_MS);
+    return () => clearTimeout(id);
+    // Só o início da espiada dispara; as larguras já estão medidas aqui.
+  }, [peek]);
+
   // Clique no botão: sai do hover como numa saída normal e abre a pergunta.
   const start = () => {
     if (!interactive) return;
@@ -1273,7 +1304,17 @@ export function ContactButton({
                 className="pointer-events-none absolute top-full mt-[11px] flex w-max origin-left items-center gap-[6px] rounded-full bg-white shadow-[0_2px_10px_rgba(20,22,24,0.16)] py-[2px] pr-[11px] pl-[2px] text-[12.5px] leading-none font-semibold whitespace-nowrap text-ink"
                 // Mesma posição relativa do original: começa 20px antes do fim.
                 // Em tela estreita alinha pela direita, para não sair da tela.
-                style={compact ? { right: 0 } : { left: "calc(100% - 20px)" }}
+                style={{
+                  ...(compact
+                    ? { right: 0, transformOrigin: "right center" }
+                    : { left: "calc(100% - 20px)" }),
+                  // No celular o chip é maior: é ele que apresenta quem atende.
+                  ...(touch && {
+                    fontSize: 16,
+                    gap: 8,
+                    padding: "3px 14px 3px 3px",
+                  }),
+                }}
                 initial={false}
                 animate={
                   chip ? { scale: 1, opacity: 1 } : { scale: 0, opacity: 0 }
@@ -1300,7 +1341,10 @@ export function ContactButton({
                   <span className="py-[3px] pl-[9px]">{closeLabel}</span>
                 ) : (
                   <>
-                    <Avatar consultant={consultants[0]} size={18} />
+                    <Avatar
+                      consultant={consultants[0]}
+                      size={touch ? 28 : 18}
+                    />
                     {chipLabel}
                   </>
                 )}

@@ -188,7 +188,9 @@ canto; na volta faz o inverso e a troca pelo círculo real acontece quando ele
 encosta de fato no destino.
 
 **Celular.**
-Em tela de toque não existe hover, então: os avatares se dividem em linhas
+Em tela de toque não existe hover, então: a animação de hover é mostrada
+sozinha uma vez logo após a abertura, com o chip de quem atende em tamanho
+maior; os avatares se dividem em linhas
 de até 3, com fotos maiores (8 consultores viram 3 + 3 + 2), o nome fica
 sempre visível sob cada foto, o × fica sempre à mostra, o chip se alinha pela
 direita para não sair da tela e os campos usam fonte de 16 px (abaixo disso o
@@ -285,7 +287,9 @@ scripts/publish-pages.sh publicação no GitHub Pages
 - Não foi testado com leitor de tela. Os controles são botões e campos reais,
   com rótulos, mas falta respeitar a preferência de "reduzir movimento" do
   sistema.
-- A animação de hover não existe em telas de toque; lá o toque abre a pergunta.
+- Em telas de toque não há hover: a animação do "Falar agora!" acontece
+  sozinha uma vez, 1,4 s depois de o botão abrir, e dura 2 s. O toque abre a
+  pergunta direto.
 
 **Próxima fase (a detalhar)**
 
