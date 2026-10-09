@@ -166,9 +166,8 @@ const MINI_LANDING = { type: "spring", stiffness: 230, damping: 17 } as const;
 const MINI_BACK_MS = 1400;
 // Tempo sem ninguém encostar no botão até ele se recolher sozinho.
 const AUTO_MINIMIZE_MS = 5000;
-// Celular: sem hover, o botão mostra o "Falar agora!" sozinho, uma vez.
-const PEEK_DELAY_MS = 1400;
-const PEEK_HOLD_MS = 2000;
+// Celular: sem hover, o botão passa sozinho para o "Falar agora!".
+const PEEK_DELAY_MS = 1800;
 
 // Borda gelatinosa: folga em volta da pill para o contorno poder estufar,
 // largura da região afetada e resolução do contorno. PAD casa com -inset-3.
@@ -539,7 +538,8 @@ export function ContactButton({
   const [viewportW, setViewportW] = useState(Infinity);
   useEffect(() => {
     setTouch(window.matchMedia("(hover: none)").matches);
-    const update = () => setViewportW(window.innerWidth - 32);
+    const update = () =>
+      setViewportW(Math.min(window.innerWidth, window.screen.width) - 32);
     update();
     window.addEventListener("resize", update);
     return () => window.removeEventListener("resize", update);
@@ -568,20 +568,38 @@ export function ContactButton({
     if (closing && phase === "idle" && intro === "done") setIntro("collapse");
   }, [closing, phase, intro]);
   // Parado no estado inicial e sem o cursor por perto, recolhe sozinho.
+  // A primeira frase aparece uma vez só. Depois da primeira reabertura (ou, no
+  // celular, logo após a abertura) o botão fica como "Falar agora!" com quem
+  // atende, e é desse estado que ele se recolhe.
+  const [stay, setStay] = useState(false);
+  const direct = (replay || stay) && view === "button";
+  useEffect(() => {
+    if (!direct || closing) return;
+    if ((intro === "expand" || intro === "done") && phase === "idle")
+      setPhase("hover");
+  }, [direct, closing, intro, phase]);
+  // Fechando nesse modo, a pill escurece primeiro, como numa saída de hover.
+  useEffect(() => {
+    if (direct && closing && phase === "hover") setPhase("leaving");
+  }, [direct, closing, phase]);
   const untouched =
     minimize &&
     autoMinimizeMs > 0 &&
     intro === "done" &&
     !closing &&
     view === "button" &&
-    phase === "idle" &&
+    (phase === "idle" || (direct && phase === "hover")) &&
     !near &&
     !closeFocused;
   useEffect(() => {
     if (!untouched) return;
-    const id = setTimeout(() => setClosing(true), autoMinimizeMs);
+    // Reaberto por um clique, espera o dobro: o cursor vem do canto da tela.
+    const id = setTimeout(
+      () => setClosing(true),
+      autoMinimizeMs * (replay ? 2 : 1),
+    );
     return () => clearTimeout(id);
-  }, [untouched, autoMinimizeMs]);
+  }, [untouched, autoMinimizeMs, replay]);
 
   useEffect(() => {
     prev.current = phase;
@@ -635,7 +653,9 @@ export function ContactButton({
   const interactive = ready && view === "button";
   const chip = ready && (closeHovered || (interactive && (near || hovered)));
   const closeShown =
-    ready && !hovered && (near || closeFocused || touch || closeHinted);
+    ready &&
+    (!hovered || direct) &&
+    (near || closeFocused || touch || closeHinted);
   useEffect(() => {
     if (intro !== "done") return;
     const id = setTimeout(() => setCloseHinted(true), CLOSE_HINT_MS);
@@ -730,7 +750,7 @@ export function ContactButton({
             : view === "done"
               ? Math.ceil(WAIT_TEXT_LEFT + text.thanks + 16 + 38 + 5)
               : null;
-  const layoutTarget = viewW ?? restW;
+  const layoutTarget = viewW ?? (direct ? hoverW : restW);
   // Os preenchimentos usam a maior largura; o que sobrar é recortado.
   const full = {
     top: 0,
@@ -749,7 +769,7 @@ export function ContactButton({
     const controls = animate(layoutWidth, layoutTarget, RESIZE);
     return () => controls.stop();
   }, [intro, layoutTarget, layoutWidth]);
-  const target = viewW ?? (hovered ? hoverW : restW);
+  const target = viewW ?? (hovered || direct ? hoverW : restW);
   useEffect(() => {
     if (!open) return;
     if (!playIntro && !sized.current) {
@@ -761,7 +781,9 @@ export function ContactButton({
     const controls = animate(width, target, {
       ...RESIZE,
       damping: ready ? RESIZE.damping : 18,
-      delay: ready && hovered ? LAG_IN : 0,
+      // No modo direto a pill e o espaço mudam juntos, sem atraso, para a
+      // pill nunca ficar mais larga que o espaço (e alargar a página).
+      delay: ready && hovered && !direct ? LAG_IN : 0,
     });
     return () => controls.stop();
   }, [open, ready, hovered, playIntro, target, width]);
@@ -829,6 +851,8 @@ export function ContactButton({
   // desliza junto com ele, então o clique nunca sai de baixo do mouse.
   const offsetX = useMotionValue(0);
   const follow = (e: PointerEvent<HTMLElement>, delay: number) => {
+    // No modo direto a pill já tem a largura do espaço: não há para onde ir.
+    if (direct) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const scale = rect.height / H || 1;
     const x = (e.clientX - rect.left) / scale;
@@ -863,12 +887,13 @@ export function ContactButton({
   };
   const leave = (e?: PointerEvent<HTMLElement>) => {
     if (e && phase === "hover") wobble(e, 1);
+    if (direct) return;
     animate(offsetX, 0, RESIZE);
     setPhase((p) => (p === "hover" ? "leaving" : p));
   };
 
   const restLabel = useLabel({
-    away: hovered || !open || view !== "button",
+    away: hovered || !open || view !== "button" || direct,
     awayY: 26,
     awayRotate: -8 * tilt(text.rest),
     enterDelay: 0.18,
@@ -940,33 +965,13 @@ export function ContactButton({
     if (attendant) onLead?.(lead, attendant);
   };
 
-  // Celular: como não há hover, a animação acontece sozinha uma vez, pouco
-  // depois de o botão abrir, com a pill centrada no espaço de repouso.
-  const peeked = useRef(false);
-  const [peek, setPeek] = useState(false);
+  // Celular: como não há hover, pouco depois de abrir o botão passa sozinho
+  // para o "Falar agora!" e fica assim (ver `direct`), sem voltar à 1ª frase.
   useEffect(() => {
-    if (!touch || !interactive || phase !== "idle" || peeked.current) return;
-    const id = setTimeout(() => {
-      peeked.current = true;
-      setPeek(true);
-    }, PEEK_DELAY_MS);
+    if (!touch || !interactive || phase !== "idle" || stay) return;
+    const id = setTimeout(() => setStay(true), PEEK_DELAY_MS);
     return () => clearTimeout(id);
-  }, [touch, interactive, phase]);
-  useEffect(() => {
-    if (!peek) return;
-    animate(offsetX, Math.max(0, (restW - hoverW) / 2), {
-      ...RESIZE,
-      delay: LAG_IN,
-    });
-    setPhase("hover");
-    const id = setTimeout(() => {
-      animate(offsetX, 0, RESIZE);
-      setPhase((p) => (p === "hover" ? "leaving" : p));
-      setPeek(false);
-    }, PEEK_HOLD_MS);
-    return () => clearTimeout(id);
-    // Só o início da espiada dispara; as larguras já estão medidas aqui.
-  }, [peek]);
+  }, [touch, interactive, phase, stay]);
 
   // Clique no botão: sai do hover como numa saída normal e abre a pergunta.
   const start = () => {
@@ -1010,22 +1015,32 @@ export function ContactButton({
     setNear(false);
     // Volta a ser o círculo na ponta direita, exatamente como saiu.
     width.set(H);
-    offsetX.set(layoutTarget - H);
+    offsetX.set((viewW ?? hoverW) - H);
     setReplay(true);
     setMini("back");
     setIntro("hidden");
   };
   // Com o botão de volta ao layout (ainda invisível), mede a ponta direita,
   // de onde o círculo saiu: é para lá que a bolinha voa de volta.
-  useLayoutEffect(() => {
+  useEffect(() => {
     if (mini !== "back" || intro !== "hidden") return;
-    const rect = layoutRef.current?.getBoundingClientRect();
-    if (rect)
-      setMiniTo({
-        left: rect.right - rect.height,
-        top: rect.top,
-        size: rect.height,
+    // Dois quadros de espera: a largura do espaço pode ter acabado de mudar.
+    let second = 0;
+    const first = requestAnimationFrame(() => {
+      second = requestAnimationFrame(() => {
+        const rect = layoutRef.current?.getBoundingClientRect();
+        if (rect)
+          setMiniTo({
+            left: rect.right - rect.height,
+            top: rect.top,
+            size: rect.height,
+          });
       });
+    });
+    return () => {
+      cancelAnimationFrame(first);
+      cancelAnimationFrame(second);
+    };
   }, [mini, intro]);
 
   const bubble =
@@ -1111,7 +1126,9 @@ export function ContactButton({
               {/* Pele: tudo que é visual, recortado pelo contorno deformável */}
               <motion.div
                 aria-hidden
-                className="pointer-events-none absolute -inset-3 text-[15.5px] leading-none font-semibold"
+                // overflow-hidden: o clip-path esconde, mas não impede que um texto
+                // mais largo que a pill alargue a página.
+                className="pointer-events-none absolute -inset-3 overflow-hidden text-[15.5px] leading-none font-semibold"
                 style={{ clipPath }}
                 initial={false}
                 animate={{
@@ -1430,7 +1447,12 @@ export function ContactButton({
                     style={{
                       padding: PICK_RING,
                       top: (H - pickSize) / 2 + pickSpot(i).rise,
-                      left: pickSpot(i).left,
+                      // Antes da escolha ficam recolhidos sob a pill, para
+                      // avatares invisíveis não alargarem a página.
+                      left:
+                        view === "button" || view === "ask"
+                          ? PICK_INSET
+                          : pickSpot(i).left,
                       width: pickSize,
                       height: pickSize,
                     }}
@@ -1483,7 +1505,9 @@ export function ContactButton({
               {/* Texto fixo em cima: a instrução da escolha ou a pergunta do campo */}
               <motion.div
                 aria-hidden
-                className="pointer-events-none absolute bottom-full left-1/2"
+                className={`pointer-events-none absolute bottom-full left-1/2 ${
+                  collapsed ? "hidden" : ""
+                }`}
                 style={{ marginBottom: 10 + (view === "pick" ? pickLift : 0) }}
                 initial={false}
                 animate={
@@ -1550,52 +1574,57 @@ export function ContactButton({
                 />
               </motion.svg>
 
-              {FIELDS.map((f, i) => {
-                const current = ready && view === "form" && step === i;
-                return (
-                  <motion.input
-                    key={f.key}
-                    ref={(el) => {
-                      inputs.current[i] = el;
-                    }}
-                    type={f.type}
-                    inputMode={f.inputMode}
-                    autoComplete={f.autoComplete}
-                    name={f.key}
-                    aria-label={f.prompt}
-                    placeholder={f.placeholder}
-                    enterKeyHint={i < FIELDS.length - 1 ? "next" : "send"}
-                    tabIndex={current ? undefined : -1}
-                    value={lead[f.key]}
-                    onChange={(e) =>
-                      setLead((l) => ({
-                        ...l,
-                        [f.key]:
-                          f.key === "whatsapp"
-                            ? maskPhone(e.target.value)
-                            : e.target.value,
-                      }))
-                    }
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        next();
+              {/* Recorte próprio: os campos existem mesmo fora do formulário e
+                  são mais largos que a pill recolhida; sem isto alargam a página
+                  (no celular o navegador reduz o zoom de tudo). */}
+              <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-full">
+                {FIELDS.map((f, i) => {
+                  const current = ready && view === "form" && step === i;
+                  return (
+                    <motion.input
+                      key={f.key}
+                      ref={(el) => {
+                        inputs.current[i] = el;
+                      }}
+                      type={f.type}
+                      inputMode={f.inputMode}
+                      autoComplete={f.autoComplete}
+                      name={f.key}
+                      aria-label={f.prompt}
+                      placeholder={f.placeholder}
+                      enterKeyHint={i < FIELDS.length - 1 ? "next" : "send"}
+                      tabIndex={current ? undefined : -1}
+                      value={lead[f.key]}
+                      onChange={(e) =>
+                        setLead((l) => ({
+                          ...l,
+                          [f.key]:
+                            f.key === "whatsapp"
+                              ? maskPhone(e.target.value)
+                              : e.target.value,
+                        }))
                       }
-                    }}
-                    className={`absolute top-0 h-full origin-left bg-transparent text-[15.5px] font-semibold text-white outline-none placeholder:text-white/40 ${
-                      current ? "pointer-events-auto" : ""
-                    }`}
-                    style={{
-                      ...fieldStyles[i],
-                      left: WAIT_TEXT_LEFT,
-                      width: fieldWidth,
-                      caretColor: ACCENT,
-                      // Abaixo de 16px o iOS dá zoom na página ao focar o campo.
-                      ...(touch && { fontSize: 16 }),
-                    }}
-                  />
-                );
-              })}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          next();
+                        }
+                      }}
+                      className={`absolute top-0 h-full origin-left bg-transparent text-[15.5px] font-semibold text-white outline-none placeholder:text-white/40 ${
+                        current ? "pointer-events-auto" : ""
+                      }`}
+                      style={{
+                        ...fieldStyles[i],
+                        left: WAIT_TEXT_LEFT,
+                        width: fieldWidth,
+                        caretColor: ACCENT,
+                        // Abaixo de 16px o iOS dá zoom na página ao focar o campo.
+                        ...(touch && { fontSize: 16 }),
+                      }}
+                    />
+                  );
+                })}
+              </div>
 
               {/* Avançar: acende quando o campo é válido e vira o "feito" no fim */}
               <motion.button

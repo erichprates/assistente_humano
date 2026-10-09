@@ -21,8 +21,17 @@ export function DemoStage() {
     const forced = Number(
       new URLSearchParams(window.location.search).get("zoom"),
     );
+    // Largura real do aparelho: innerWidth pode crescer se o navegador
+    // reduzir o zoom da página, e o botão não deve mudar de tamanho por isso.
+    let last = 0;
     const update = () => {
-      const room = window.innerWidth - SIDE_MARGIN;
+      const width = Math.min(
+        document.documentElement.clientWidth,
+        window.screen.width,
+      );
+      if (width === last) return;
+      last = width;
+      const room = width - SIDE_MARGIN;
       const z = forced > 0 ? forced : Math.min(ZOOM, room / FIT_WIDTH);
       setZoom(z);
       setMaxWidth(room / z);

@@ -5,3 +5,9 @@
   --color-ink: #141618;
   --color-lilac: #ccc6d5;
 }
+
+/* Nada pode alargar a página: no celular isso faz o navegador reduzir o zoom. */
+html,
+body {
+  overflow-x: clip;
+}

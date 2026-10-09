@@ -37,6 +37,9 @@ Em qualquer etapa:
   inferior direito da tela e ganha uma bolinha vermelha de notificação.
 - **Reabrir:** clicar na bolinha faz o caminho inverso e **retoma de onde a
   pessoa parou** (etapa, consultor escolhido e o que já foi digitado).
+- **A primeira frase aparece uma vez só.** Quem reabre sem ter avançado já
+  sabe que há um consultor: o botão volta direto como "Falar agora!" com o chip
+  de quem atende, e fica assim.
 - **Recolher sozinho:** no estado inicial, 5 s sem o cursor por perto fazem o
   botão se fechar e ir para o canto.
 
@@ -188,9 +191,9 @@ canto; na volta faz o inverso e a troca pelo círculo real acontece quando ele
 encosta de fato no destino.
 
 **Celular.**
-Em tela de toque não existe hover, então: a animação de hover é mostrada
-sozinha uma vez logo após a abertura, com o chip de quem atende em tamanho
-maior; os avatares se dividem em linhas
+Em tela de toque não existe hover, então: o botão passa sozinho para o estado
+de hover logo após a abertura e permanece nele, com o chip de quem atende em
+tamanho maior; os avatares se dividem em linhas
 de até 3, com fotos maiores (8 consultores viram 3 + 3 + 2), o nome fica
 sempre visível sob cada foto, o × fica sempre à mostra, o chip se alinha pela
 direita para não sair da tela e os campos usam fonte de 16 px (abaixo disso o
@@ -200,6 +203,15 @@ consultor (o teclado sobe durante a mensagem de quem atende, que lá dura 1,6 s)
 e ao avançar o foco passa para o próximo campo no próprio toque, mantendo o
 teclado aberto até o último. Na demonstração o botão inteiro é reduzido até
 caber na largura do aparelho.
+
+**Nada pode ser mais largo que a pill.**
+Vários elementos existem o tempo todo e só ficam invisíveis (textos de outras
+etapas, campos do formulário, avatares). Se algum deles for mais largo que a
+pill recolhida, a página ganha largura e o navegador do celular reduz o zoom de
+tudo: foi um defeito real, visto como "o botão diminui na tela". Por isso a
+pele e os campos têm recorte próprio (`overflow: hidden`), os avatares ficam
+recolhidos sob a pill antes da escolha e a pill muda de largura junto com o
+espaço que ocupa. Vale conferir `scrollWidth` da página ao mexer no layout.
 
 **Sombras.**
 Os elementos brancos (chips, ×, contorno dos avatares, círculo da abertura)
@@ -290,9 +302,9 @@ scripts/publish-pages.sh publicação no GitHub Pages
 - Não foi testado com leitor de tela. Os controles são botões e campos reais,
   com rótulos, mas falta respeitar a preferência de "reduzir movimento" do
   sistema.
-- Em telas de toque não há hover: a animação do "Falar agora!" acontece
-  sozinha uma vez, 1,4 s depois de o botão abrir, e dura 2 s. O toque abre a
-  pergunta direto.
+- Em telas de toque não há hover: 1,8 s depois de abrir, o botão passa sozinho
+  para "Falar agora!" e fica assim até ser tocado ou se recolher. O toque abre
+  a pergunta direto.
 
 **Próxima fase (a detalhar)**
 
