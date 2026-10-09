@@ -27,7 +27,7 @@ O fluxo completo, na ordem em que o visitante vê:
 | 5 | Clique | A pill pergunta "Você já é cliente?" com os botões **Sim** e **Não**. |
 | 6a | Sim | A pill some e 8 avatares entram em cascata, com "Escolha seu consultor" em cima e o nome sob o avatar apontado. |
 | 6b | Não | Vai direto para o consultor de plantão. |
-| 7 | Mensagem | "Diego já vai te atender" (plantão) ou "Já vou tentar contato com o/a …" (outro consultor). Fica 2,2 s na tela (1,6 s no celular, onde o teclado já sobe nesse momento). |
+| 7 | Mensagem | "Diego já vai te atender" (plantão) ou "Já vou tentar contato com o/a …" (outro consultor). Aparece letra a letra, como se estivesse sendo digitada. Fica 2,4 s na tela (2,2 s no celular, onde o teclado já sobe nesse momento). |
 | 8 | Contatos | Um campo por vez dentro da pill: nome, e-mail e WhatsApp. O contorno do avatar vai se preenchendo de vermelho como progresso. Campo inválido faz a pill balançar. |
 | 9 | Fim | A seta vira um ✓ e entra "Obrigado, {primeiro nome}!". |
 
@@ -205,7 +205,7 @@ sempre visível sob cada foto, o × fica sempre à mostra, o chip se alinha pela
 direita para não sair da tela e os campos usam fonte de 16 px (abaixo disso o
 iOS dá zoom na página ao focar). O navegador do celular só abre o teclado dentro
 de um toque; por isso o campo do nome recebe o foco já no toque em "Não" ou no
-consultor (o teclado sobe durante a mensagem de quem atende, que lá dura 1,6 s),
+consultor (o teclado sobe durante a mensagem de quem atende, que lá dura 2,2 s),
 e ao avançar o foco passa para o próximo campo no próprio toque, mantendo o
 teclado aberto até o último. Na demonstração o botão inteiro é reduzido até
 caber na largura do aparelho.
@@ -234,6 +234,15 @@ prévia ao passar o mouse na sugestão são do navegador e não mudam.
 O balão "Diego" sob a pill aparece quando o cursor chega perto do botão, antes
 de encostar. No canto superior direito, que é o caminho até o ×, ele não
 aparece: ali só surge "Fechar", com o cursor já sobre o ×.
+
+**Mensagens digitadas.**
+Depois do "Sim"/"Não", as mensagens de dentro da pill ("Diego já vai te
+atender", "Já vou tentar contato com…", "Obrigado, …!") aparecem letra a letra,
+com um cursor vermelho, como se alguém estivesse digitando (`TYPE_MS`, 24 ms
+por letra). O texto inteiro ocupa o lugar desde o início, com a parte que falta
+invisível, para a largura da pill não mudar durante a digitação. Essas
+mensagens não têm o balanço dos outros textos. A mensagem fica 2,4 s na tela no
+computador e 2,2 s no celular antes de o formulário entrar.
 
 **Anel de progresso.**
 O anel vermelho em volta do avatar é um pouco mais espesso que o contorno
@@ -275,7 +284,7 @@ Camadas, de baixo para cima:
 | Círculo com avatar antes de expandir | 850 ms |
 | × aparece sozinho | 1500 ms após abrir |
 | Recolhe sozinho | 5000 ms sem interação |
-| Mensagem de quem atende | 2200 ms (celular: 1600 ms) |
+| Mensagem de quem atende | 2400 ms (celular: 2200 ms) |
 | Celular: passa sozinho para "Falar agora!" | 1800 ms após abrir |
 | Recolhe sozinho após reabertura | 10 000 ms |
 | Saída do hover (pill escura cobre) | 510 ms |

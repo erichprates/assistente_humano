@@ -140,9 +140,11 @@ const SWAP_OFFER_MS = 4000;
 // Tempo em repouso até o × aparecer sozinho, para mostrar que dá para fechar.
 const CLOSE_HINT_MS = 1500;
 // Tempo com a mensagem de quem atende antes de pedir os contatos.
-const WAIT_MS = 2200;
+const WAIT_MS = 2400;
 // No celular o teclado já está aberto nesse momento; a espera é mais curta.
-const WAIT_TOUCH_MS = 1600;
+const WAIT_TOUCH_MS = 2200;
+// Mensagens depois do "Sim"/"Não": tempo por letra do efeito de digitação.
+const TYPE_MS = 24;
 // Largura da pill no formulário e raio do anel de progresso no avatar.
 const FORM_W = 312;
 const PROGRESS_R = 18.75;
@@ -278,6 +280,54 @@ function useLabel({
   const opacity = useTransform(p, [0.5, 0.95], [1, 0]);
 
   return { y, rotate, opacity };
+}
+
+/**
+ * Texto que aparece como se estivesse sendo digitado. O texto inteiro ocupa
+ * o lugar desde o início (a parte que falta fica invisível), então a largura
+ * medida da pill não muda enquanto as letras chegam.
+ */
+function Typed({
+  text,
+  active,
+  delay,
+}: {
+  text: string;
+  active: boolean;
+  /** Espera, em segundos, antes da primeira letra. */
+  delay: number;
+}) {
+  const [count, setCount] = useState(0);
+  useEffect(() => {
+    if (!active) return;
+    const start = performance.now() + delay * 1000;
+    let frame = requestAnimationFrame(function tick(now) {
+      const n = Math.max(0, Math.floor((now - start) / TYPE_MS));
+      setCount(Math.min(n, text.length));
+      if (n < text.length) frame = requestAnimationFrame(tick);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [active, text, delay]);
+
+  const typing = active && count < text.length;
+  return (
+    <span aria-label={text} className="whitespace-pre">
+      <span aria-hidden className="relative inline-block">
+        {text.slice(0, count)}
+        {/* Cursor de digitação: some pouco depois da última letra */}
+        <motion.span
+          className="absolute top-[12%] left-full ml-[1.5px] h-[76%] w-[2px] rounded-full"
+          style={{ backgroundColor: ACCENT }}
+          initial={false}
+          animate={{ opacity: typing ? 1 : 0 }}
+          transition={{ duration: 0.15, delay: typing ? 0 : 0.35 }}
+        />
+      </span>
+      <span aria-hidden className="opacity-0">
+        {text.slice(count)}
+      </span>
+    </span>
+  );
 }
 
 function Avatar({
@@ -949,6 +999,8 @@ export function ContactButton({
     awayRotate: -8 * tilt(text.wait),
     enterDelay: 0.3,
     exitDelay: 0,
+    // Digitado no lugar: sem o balanço, que brigaria com as letras chegando.
+    steady: true,
   });
 
   const thanksLabel = useLabel({
@@ -957,6 +1009,7 @@ export function ContactButton({
     awayRotate: -8 * tilt(text.thanks),
     enterDelay: 0.2,
     exitDelay: 0,
+    steady: true,
   });
   // Campos do formulário: entram por baixo e, respondidos, saem por cima.
   const fieldWidth = FORM_W - WAIT_TEXT_LEFT - 48;
@@ -1353,7 +1406,11 @@ export function ContactButton({
                     className="absolute top-0 flex h-full origin-left items-center whitespace-nowrap text-white"
                     style={{ ...waitLabel, left: WAIT_TEXT_LEFT }}
                   >
-                    {waitMessage}
+                    <Typed
+                      text={waitMessage}
+                      active={open && view === "wait"}
+                      delay={0.5}
+                    />
                   </motion.span>
 
                   <motion.span
@@ -1361,7 +1418,11 @@ export function ContactButton({
                     className="absolute top-0 flex h-full origin-left items-center whitespace-nowrap text-white"
                     style={{ ...thanksLabel, left: WAIT_TEXT_LEFT }}
                   >
-                    {thanks}
+                    <Typed
+                      text={thanks}
+                      active={open && view === "done"}
+                      delay={0.4}
+                    />
                   </motion.span>
 
                   {/* Avatar da abertura: encolhe até o lugar do ponto verde */}
