@@ -118,6 +118,11 @@ const TILT_REF = 84;
 // Na escolha a pill some e os avatares ficam soltos, com contorno branco.
 const PICK_SIZE = 42;
 const PICK_STEP = 54;
+// Em tela de toque não há hover: o nome fica sempre sob cada avatar, então a
+// grade precisa de mais espaço entre eles.
+const PICK_STEP_TOUCH = 74;
+const PICK_ROW = 58;
+const PICK_ROW_TOUCH = 80;
 const PICK_INSET = 3;
 const PICK_RING = 2;
 const PICK_CHIP =
@@ -428,6 +433,7 @@ export function ContactButton({
   closable = true,
   minimize = true,
   autoMinimizeMs = AUTO_MINIMIZE_MS,
+  maxWidth,
   closeLabel = "Fechar",
   onClose,
   consultants = DEFAULT_CONSULTANTS,
@@ -458,6 +464,11 @@ export function ContactButton({
   minimize?: boolean;
   /** Recolhe sozinho após esse tempo sem interação (0 desliga). */
   autoMinimizeMs?: number;
+  /**
+   * Largura disponível (px). Define em quantas linhas os avatares se
+   * distribuem. Padrão: a largura da janela menos uma margem.
+   */
+  maxWidth?: number;
   closeLabel?: string;
   onClose?: () => void;
   consultants?: Consultant[];
@@ -514,9 +525,17 @@ export function ContactButton({
   }, [view, opened]);
   // Sem hover (toque) não há "chegar perto": o × fica sempre à mostra.
   const [touch, setTouch] = useState(false);
+  const [viewportW, setViewportW] = useState(Infinity);
   useEffect(() => {
     setTouch(window.matchMedia("(hover: none)").matches);
+    const update = () => setViewportW(window.innerWidth - 32);
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
   }, []);
+  const avail = maxWidth ?? viewportW;
+  // Telas estreitas: o que fica "pendurado" para fora da pill é trazido para dentro.
+  const compact = avail < 420;
   const prev = useRef<Phase>("idle");
   const sized = useRef(false);
   const bodyRef = useRef<HTMLDivElement>(null);
@@ -656,8 +675,25 @@ export function ContactButton({
   // Texto longo gira menos, para a ponta subir o mesmo tanto que no original.
   const tilt = (width: number) => Math.min(1, TILT_REF / (width || TILT_REF));
 
-  const pickW =
-    PICK_INSET * 2 + PICK_SIZE + PICK_STEP * (consultants.length - 1);
+  // Grade de avatares: uma linha se couber; senão divide em linhas iguais,
+  // centradas na altura da pill.
+  const pickStepX = touch ? PICK_STEP_TOUCH : PICK_STEP;
+  const pickStepY = touch ? PICK_ROW_TOUCH : PICK_ROW;
+  const pickMaxCols = Math.max(
+    1,
+    Math.floor((avail - PICK_INSET * 2 - PICK_SIZE) / pickStepX) + 1,
+  );
+  const pickRows = Math.ceil(
+    consultants.length / Math.min(consultants.length, pickMaxCols),
+  );
+  const pickCols = Math.ceil(consultants.length / pickRows);
+  const pickW = PICK_INSET * 2 + PICK_SIZE + pickStepX * (pickCols - 1);
+  // Quanto a grade passa da pill para cima e para baixo.
+  const pickLift = ((pickRows - 1) / 2) * pickStepY;
+  const pickSpot = (i: number) => ({
+    left: PICK_INSET + (i % pickCols) * pickStepX,
+    rise: (Math.floor(i / pickCols) - (pickRows - 1) / 2) * pickStepY,
+  });
   // Na conversa a largura é a do conteúdo, e o espaço ocupado acompanha.
   const viewW =
     view === "ask"
@@ -895,6 +931,8 @@ export function ContactButton({
 
   const filled = phase === "hover" || phase === "leaving";
   const live = view === "button" || (view === "wait" && onDuty);
+  // No toque os nomes já estão sob cada avatar.
+  const nameShown = open && view === "pick" && pickHover !== null && !touch;
   const dotVisible = open && phase === "idle" && live;
 
   // Reabrindo, a pill se estende para a esquerda: o inverso de recolher.
@@ -1218,7 +1256,8 @@ export function ContactButton({
                 aria-hidden
                 className="pointer-events-none absolute top-full mt-[11px] flex w-max origin-left items-center gap-[6px] rounded-full bg-white shadow-[0_2px_10px_rgba(20,22,24,0.16)] py-[2px] pr-[11px] pl-[2px] text-[12.5px] leading-none font-semibold whitespace-nowrap text-ink"
                 // Mesma posição relativa do original: começa 20px antes do fim.
-                style={{ left: "calc(100% - 20px)" }}
+                // Em tela estreita alinha pela direita, para não sair da tela.
+                style={compact ? { right: 0 } : { left: "calc(100% - 20px)" }}
                 initial={false}
                 animate={
                   chip ? { scale: 1, opacity: 1 } : { scale: 0, opacity: 0 }
@@ -1322,25 +1361,24 @@ export function ContactButton({
                     }`}
                     style={{
                       padding: PICK_RING,
-                      top: (H - PICK_SIZE) / 2,
-                      left: PICK_INSET + i * PICK_STEP,
+                      top: (H - PICK_SIZE) / 2 + pickSpot(i).rise,
+                      left: pickSpot(i).left,
                       width: PICK_SIZE,
                       height: PICK_SIZE,
                     }}
                     initial={false}
                     animate={
                       picking
-                        ? { x: 0, scale: 1, opacity: 1 }
+                        ? { x: 0, y: 0, scale: 1, opacity: 1 }
                         : attending
                           ? // Quem atende desliza até a ponta esquerda da pill.
                             {
-                              x:
-                                R -
-                                (PICK_INSET + PICK_SIZE / 2 + i * PICK_STEP),
+                              x: R - (pickSpot(i).left + PICK_SIZE / 2),
+                              y: -pickSpot(i).rise,
                               scale: 40 / PICK_SIZE,
                               opacity: 1,
                             }
-                          : { x: 0, scale: 0, opacity: 0 }
+                          : { x: 0, y: 0, scale: 0, opacity: 0 }
                     }
                     whileHover={picking ? { scale: 1.16, y: -3 } : undefined}
                     whileTap={picking ? { scale: 0.92 } : undefined}
@@ -1364,6 +1402,12 @@ export function ContactButton({
                     <span className="relative block size-full">
                       <Avatar consultant={consultant} fill />
                     </span>
+                    {/* No toque não existe hover para revelar o nome */}
+                    {touch && picking && (
+                      <span className="pointer-events-none absolute top-full left-1/2 mt-[5px] -translate-x-1/2 rounded-full bg-white px-[7px] py-[3px] text-[11px] leading-none font-semibold whitespace-nowrap text-ink shadow-[0_2px_10px_rgba(20,22,24,0.16)]">
+                        {consultant.name}
+                      </span>
+                    )}
                   </motion.button>
                 );
               })}
@@ -1371,7 +1415,8 @@ export function ContactButton({
               {/* Texto fixo em cima: a instrução da escolha ou a pergunta do campo */}
               <motion.div
                 aria-hidden
-                className="pointer-events-none absolute bottom-full left-1/2 mb-[10px]"
+                className="pointer-events-none absolute bottom-full left-1/2"
+                style={{ marginBottom: 10 + (view === "pick" ? pickLift : 0) }}
                 initial={false}
                 animate={
                   open && (view === "pick" || view === "form")
@@ -1477,6 +1522,8 @@ export function ContactButton({
                       left: WAIT_TEXT_LEFT,
                       width: fieldWidth,
                       caretColor: ACCENT,
+                      // Abaixo de 16px o iOS dá zoom na página ao focar o campo.
+                      ...(touch && { fontSize: 16 }),
                     }}
                   />
                 );
@@ -1561,13 +1608,13 @@ export function ContactButton({
               {/* Nome do consultor sob o cursor: aparece embaixo e segue o hover */}
               <motion.div
                 aria-hidden
-                className="pointer-events-none absolute top-full mt-[10px]"
+                className="pointer-events-none absolute top-full"
+                style={{ marginTop: 10 + pickLift }}
                 initial={false}
                 animate={{
-                  left: PICK_INSET + PICK_SIZE / 2 + pickLast * PICK_STEP,
-                  scale: open && view === "pick" && pickHover !== null ? 1 : 0,
-                  opacity:
-                    open && view === "pick" && pickHover !== null ? 1 : 0,
+                  left: pickSpot(pickLast).left + PICK_SIZE / 2,
+                  scale: nameShown ? 1 : 0,
+                  opacity: nameShown ? 1 : 0,
                 }}
                 transition={{
                   type: "spring",
@@ -1613,7 +1660,9 @@ export function ContactButton({
                 tabIndex={ready ? undefined : -1}
                 // Clicável mesmo antes de aparecer: entrar aqui tira o hover da
                 // pill, e é isso que faz o × surgir.
-                className={`absolute -top-[9px] -right-[9px] flex size-[26px] cursor-pointer items-center justify-center rounded-full outline-offset-0 ${
+                // Na escolha em várias linhas, sobe para o canto da grade.
+                style={{ top: -9 - (open && view === "pick" ? pickLift : 0) }}
+                className={`absolute -right-[9px] flex size-[26px] cursor-pointer items-center justify-center rounded-full outline-offset-0 ${
                   ready ? "" : "pointer-events-none"
                 }`}
                 initial={false}

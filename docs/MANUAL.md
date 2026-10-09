@@ -52,8 +52,9 @@ npm run dev        # http://localhost:3000
 ```
 
 A raiz (`/`) e `/demo` mostram a mesma demonstração: o botão sobre um print da
-página de estoque do site, usado só como fundo de simulação. O botão **Replay**
-recria o componente do zero (inclusive a espera de 4 s).
+página de estoque do site (versão de computador ou de celular, conforme a
+largura da janela), usado só como fundo de simulação. O botão **Replay** recria
+o componente do zero e mostra a abertura na hora, sem a espera de 4 s.
 
 `?zoom=4` no endereço amplia o botão; serve para inspecionar a animação quadro
 a quadro.
@@ -100,6 +101,7 @@ A largura da pill é medida a partir dos textos, então qualquer frase cabe.
 | `closable` | `true` | Mostra o ×. |
 | `minimize` | `true` | Ao fechar, vira a bolinha no canto; com `false`, some. |
 | `autoMinimizeMs` | `5000` | Recolhe sozinho após esse tempo parado (`0` desliga). |
+| `maxWidth` | largura da janela − 32 px | Largura disponível; define em quantas linhas os avatares se distribuem. |
 | `question`, `yesLabel`, `noLabel` | "Você já é cliente?", "Sim", "Não" | Textos da pergunta. |
 | `pickHint` | "Escolha seu consultor" | Texto acima dos avatares. |
 | `waitLabel(c)` | "{nome} já vai te atender" | Mensagem para o plantonista. |
@@ -185,6 +187,20 @@ sobre o círculo recolhido (posição e tamanho medidos na tela) e voa até o
 canto; na volta faz o inverso e a troca pelo círculo real acontece quando ele
 encosta de fato no destino.
 
+**Celular.**
+Em tela de toque não existe hover, então: os avatares se dividem em linhas
+iguais conforme a largura disponível (8 consultores viram 4 + 4), o nome fica
+sempre visível sob cada foto, o × fica sempre à mostra, o chip se alinha pela
+direita para não sair da tela e os campos usam fonte de 16 px (abaixo disso o
+iOS dá zoom na página ao focar). Na demonstração o botão inteiro é reduzido até
+caber na largura do aparelho.
+
+**Sombras.**
+Os elementos brancos (chips, ×, contorno dos avatares, círculo da abertura)
+têm uma sombra suave para aparecerem sobre o fundo claro do site. Na pill ela é
+um filtro `drop-shadow` no elemento pai, porque o `clip-path` cortaria uma
+sombra comum.
+
 ### 4.3 Estrutura do componente
 
 Tudo está em `components/contact-button.tsx`. Três máquinas de estado
@@ -235,7 +251,7 @@ components/
 lib/asset.ts             prefixo de caminho para o GitHub Pages
 public/
   consultores/*.jpg      fotos recortadas (160×160)
-  site-estoque.jpg       print usado como fundo da simulação
+  site-estoque*.jpg      prints usados como fundo da simulação
 scripts/publish-pages.sh publicação no GitHub Pages
 ```
 
@@ -263,9 +279,11 @@ scripts/publish-pages.sh publicação no GitHub Pages
 - Validações simples: nome com 2+ letras, formato de e-mail, telefone com 10+
   dígitos. Não há verificação real de e-mail ou número.
 - Não há aviso de privacidade (LGPD) no formulário.
-- Não foi testado em celular nem com leitor de tela. Os controles são botões e
-  campos reais, com rótulos, mas falta respeitar a preferência de "reduzir
-  movimento" do sistema.
+- No celular o fluxo foi testado só em emulação de iPhone no Chrome, não em um
+  aparelho de verdade (teclado virtual, Safari).
+- Não foi testado com leitor de tela. Os controles são botões e campos reais,
+  com rótulos, mas falta respeitar a preferência de "reduzir movimento" do
+  sistema.
 - A animação de hover não existe em telas de toque; lá o toque abre a pergunta.
 
 **Próxima fase (a detalhar)**

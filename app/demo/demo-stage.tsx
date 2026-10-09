@@ -4,35 +4,64 @@ import { useEffect, useState } from "react";
 import { ContactButton } from "@/components/contact-button";
 import { asset } from "@/lib/asset";
 
-// Tamanho de exibição: 50% maior que o de origem (48px de altura).
+// Tamanho de exibição no computador: 50% maior que o de origem (48px de altura).
 const ZOOM = 1.5;
+// Largura que o botão precisa para caber inteiro; no celular o tamanho é
+// reduzido até isso caber na tela.
+const FIT_WIDTH = 360;
+const SIDE_MARGIN = 24;
 
 export function DemoStage() {
   const [zoom, setZoom] = useState(ZOOM);
+  const [maxWidth, setMaxWidth] = useState<number | undefined>(undefined);
   const [run, setRun] = useState(0);
 
   // ?zoom=4 abre em outro tamanho (útil para gravar/comparar frames).
   useEffect(() => {
-    const z = Number(new URLSearchParams(window.location.search).get("zoom"));
-    if (z > 0) setZoom(z);
+    const forced = Number(
+      new URLSearchParams(window.location.search).get("zoom"),
+    );
+    const update = () => {
+      const room = window.innerWidth - SIDE_MARGIN;
+      const z = forced > 0 ? forced : Math.min(ZOOM, room / FIT_WIDTH);
+      setZoom(z);
+      setMaxWidth(room / z);
+    };
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
   }, []);
 
   return (
-    // Fundo: print da página de estoque do site, fixo, só para simular o
-    // botão no lugar onde ele vai ser usado.
-    <main
-      className="relative flex flex-1 items-center justify-center bg-[#f6f6f6] bg-fixed bg-top bg-no-repeat"
-      style={{
-        backgroundImage: `url(${asset("/site-estoque.jpg")})`,
-        backgroundSize: "100% auto",
-      }}
-    >
-      <div style={{ zoom }}>
+    <main className="relative flex flex-1 items-center justify-center bg-[#f6f6f6]">
+      {/* Fundo: prints da página de estoque do site (computador e celular),
+          fixos, só para simular o botão no lugar onde ele vai ser usado. */}
+      <div
+        aria-hidden
+        className="fixed inset-0 hidden bg-top bg-no-repeat sm:block"
+        style={{
+          backgroundImage: `url(${asset("/site-estoque.jpg")})`,
+          backgroundSize: "100% auto",
+        }}
+      />
+      <div
+        aria-hidden
+        className="fixed inset-0 bg-top bg-no-repeat sm:hidden"
+        style={{
+          backgroundImage: `url(${asset("/site-estoque-mobile.jpg")})`,
+          backgroundSize: "100% auto",
+        }}
+      />
+
+      <div className="relative" style={{ zoom }}>
         <ContactButton
           key={run}
           label="Tem um consultor humano disponível"
           hoverLabel="Falar agora!"
           chipLabel="Diego"
+          maxWidth={maxWidth}
+          // O Replay mostra a abertura na hora; só a primeira visita espera.
+          startDelayMs={run === 0 ? undefined : 150}
           // Na demo os contatos só vão para o console do navegador.
           onLead={(lead, consultant) => console.log("lead", lead, consultant)}
         />
