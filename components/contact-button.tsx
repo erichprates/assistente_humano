@@ -1623,7 +1623,10 @@ export function ContactButton({
                           next();
                         }
                       }}
-                      className={`absolute top-0 h-full origin-left bg-transparent text-[15.5px] font-semibold text-white outline-none placeholder:text-white/40 ${
+                      // O preenchimento automático pinta o fundo do campo e não
+                      // deixa trocar a cor; a transição "infinita" impede que a
+                      // pintura chegue a aparecer, e o texto segue branco.
+                      className={`absolute top-0 h-full origin-left bg-transparent text-[15.5px] font-semibold text-white outline-none placeholder:text-white/40 [&:-webkit-autofill]:[transition:background-color_99999s_ease-out_99999s,color_99999s_ease-out_99999s] [&:-webkit-autofill]:[-webkit-text-fill-color:#fff] ${
                         current ? "pointer-events-auto" : ""
                       }`}
                       style={{

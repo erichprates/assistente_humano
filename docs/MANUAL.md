@@ -223,6 +223,13 @@ O recorte dos campos é `overflow: clip`, não `hidden`: uma caixa `hidden` aind
 pode ser rolada, e o navegador a rolava ao focar o campo que entrava de baixo,
 deixando o texto digitado acima do centro da pill (visto no computador).
 
+**Preenchimento automático.**
+Quando o navegador preenche o campo sozinho, ele pinta um fundo colorido atrás
+do texto e não deixa trocar essa cor. Os campos usam uma transição de duração
+"infinita" na cor de fundo (a pintura nunca chega a aparecer) e forçam o texto
+branco. Só vale para o campo já preenchido: a barra de sugestões do teclado e a
+prévia ao passar o mouse na sugestão são do navegador e não mudam.
+
 **Anel de progresso.**
 O anel vermelho em volta do avatar é um pouco mais espesso que o contorno
 branco (3,5 contra 2) e o cobre por inteiro; com a mesma espessura sobrava um
