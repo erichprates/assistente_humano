@@ -215,9 +215,18 @@ Vários elementos existem o tempo todo e só ficam invisíveis (textos de outras
 etapas, campos do formulário, avatares). Se algum deles for mais largo que a
 pill recolhida, a página ganha largura e o navegador do celular reduz o zoom de
 tudo: foi um defeito real, visto como "o botão diminui na tela". Por isso a
-pele e os campos têm recorte próprio (`overflow: hidden`), os avatares ficam
-recolhidos sob a pill antes da escolha e a pill muda de largura junto com o
-espaço que ocupa. Vale conferir `scrollWidth` da página ao mexer no layout.
+pele e os campos têm recorte próprio, os avatares ficam recolhidos sob a pill
+antes da escolha e a pill muda de largura junto com o espaço que ocupa. Vale
+conferir `scrollWidth` da página ao mexer no layout.
+
+O recorte dos campos é `overflow: clip`, não `hidden`: uma caixa `hidden` ainda
+pode ser rolada, e o navegador a rolava ao focar o campo que entrava de baixo,
+deixando o texto digitado acima do centro da pill (visto no computador).
+
+**Anel de progresso.**
+O anel vermelho em volta do avatar é um pouco mais espesso que o contorno
+branco (3,5 contra 2) e o cobre por inteiro; com a mesma espessura sobrava um
+filete branco atrás do vermelho.
 
 **Sombras.**
 Os elementos brancos (chips, ×, contorno dos avatares, círculo da abertura)

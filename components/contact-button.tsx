@@ -139,7 +139,7 @@ const WAIT_MS = 2200;
 const WAIT_TOUCH_MS = 1600;
 // Largura da pill no formulário e raio do anel de progresso no avatar.
 const FORM_W = 312;
-const PROGRESS_R = 19;
+const PROGRESS_R = 18.75;
 // Spring da mudança de largura no hover e do deslize que segue o cursor.
 const RESIZE = { type: "spring", stiffness: 220, damping: 21 } as const;
 
@@ -536,7 +536,7 @@ export function ContactButton({
   // O foco acompanha o campo da vez, já com a troca em andamento.
   useEffect(() => {
     if (view !== "form" || !opened) return;
-    const id = setTimeout(() => inputs.current[step]?.focus(), 320);
+    const id = setTimeout(() => inputs.current[step]?.focus({ preventScroll: true }), 320);
     return () => clearTimeout(id);
   }, [view, step, opened]);
   useEffect(() => {
@@ -961,7 +961,7 @@ export function ContactButton({
     if (!fieldValid) {
       // Campo inválido: a pill balança, como um "não" com a cabeça.
       animate(offsetX, [0, -7, 7, -4, 4, 0], { duration: 0.36 });
-      inputs.current[step]?.focus();
+      inputs.current[step]?.focus({ preventScroll: true });
       return;
     }
     if (step < FIELDS.length - 1) {
@@ -1554,7 +1554,7 @@ export function ContactButton({
               <motion.svg
                 aria-hidden
                 viewBox="0 0 40 40"
-                className="pointer-events-none absolute top-1 left-1 size-10 -rotate-90"
+                className="pointer-events-none absolute top-1 left-1 size-10 -rotate-90 overflow-visible"
                 initial={false}
                 animate={{
                   opacity: open && (view === "form" || view === "done") ? 1 : 0,
@@ -1567,7 +1567,7 @@ export function ContactButton({
                   r={PROGRESS_R}
                   fill="none"
                   stroke={ACCENT}
-                  strokeWidth="2.5"
+                  strokeWidth="3.5"
                   strokeLinecap="round"
                   initial={false}
                   animate={{
@@ -1587,8 +1587,10 @@ export function ContactButton({
 
               {/* Recorte próprio: os campos existem mesmo fora do formulário e
                   são mais largos que a pill recolhida; sem isto alargam a página
-                  (no celular o navegador reduz o zoom de tudo). */}
-              <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-full">
+                  (no celular o navegador reduz o zoom de tudo). É `clip` e não
+                  `hidden` porque o foco rolaria o conteúdo de uma caixa
+                  `hidden`, deixando o campo fora do centro. */}
+              <div className="pointer-events-none absolute inset-0 overflow-clip rounded-full">
                 {FIELDS.map((f, i) => {
                   const current = ready && view === "form" && step === i;
                   return (
