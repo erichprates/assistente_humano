@@ -120,9 +120,12 @@ const PICK_SIZE = 42;
 const PICK_STEP = 54;
 // Em tela de toque não há hover: o nome fica sempre sob cada avatar, então a
 // grade precisa de mais espaço entre eles.
-const PICK_STEP_TOUCH = 74;
+// No toque são avatares maiores, no máximo 3 por linha.
+const PICK_SIZE_TOUCH = 64;
+const PICK_COLS_TOUCH = 3;
+const PICK_STEP_TOUCH = 100;
 const PICK_ROW = 58;
-const PICK_ROW_TOUCH = 80;
+const PICK_ROW_TOUCH = 104;
 const PICK_INSET = 3;
 const PICK_RING = 2;
 const PICK_CHIP =
@@ -677,23 +680,32 @@ export function ContactButton({
 
   // Grade de avatares: uma linha se couber; senão divide em linhas iguais,
   // centradas na altura da pill.
+  const pickSize = touch ? PICK_SIZE_TOUCH : PICK_SIZE;
   const pickStepX = touch ? PICK_STEP_TOUCH : PICK_STEP;
   const pickStepY = touch ? PICK_ROW_TOUCH : PICK_ROW;
   const pickMaxCols = Math.max(
     1,
-    Math.floor((avail - PICK_INSET * 2 - PICK_SIZE) / pickStepX) + 1,
+    Math.min(
+      touch ? PICK_COLS_TOUCH : Infinity,
+      Math.floor((avail - PICK_INSET * 2 - pickSize) / pickStepX) + 1,
+    ),
   );
   const pickRows = Math.ceil(
     consultants.length / Math.min(consultants.length, pickMaxCols),
   );
   const pickCols = Math.ceil(consultants.length / pickRows);
-  const pickW = PICK_INSET * 2 + PICK_SIZE + pickStepX * (pickCols - 1);
+  const pickW = PICK_INSET * 2 + pickSize + pickStepX * (pickCols - 1);
   // Quanto a grade passa da pill para cima e para baixo.
   const pickLift = ((pickRows - 1) / 2) * pickStepY;
-  const pickSpot = (i: number) => ({
-    left: PICK_INSET + (i % pickCols) * pickStepX,
-    rise: (Math.floor(i / pickCols) - (pickRows - 1) / 2) * pickStepY,
-  });
+  const pickSpot = (i: number) => {
+    const row = Math.floor(i / pickCols);
+    // A última linha pode ter menos gente: fica centralizada.
+    const inRow = Math.min(pickCols, consultants.length - row * pickCols);
+    return {
+      left: PICK_INSET + ((i % pickCols) + (pickCols - inRow) / 2) * pickStepX,
+      rise: (row - (pickRows - 1) / 2) * pickStepY,
+    };
+  };
   // Na conversa a largura é a do conteúdo, e o espaço ocupado acompanha.
   const viewW =
     view === "ask"
@@ -909,9 +921,13 @@ export function ContactButton({
       return;
     }
     if (step < FIELDS.length - 1) {
+      // Foco no próximo campo já dentro do toque/Enter: no celular é isso
+      // que mantém o teclado aberto de um campo para o outro.
+      inputs.current[step + 1]?.focus({ preventScroll: true });
       setStep(step + 1);
       return;
     }
+    inputs.current[step]?.blur();
     setView("done");
     if (attendant) onLead?.(lead, attendant);
   };
@@ -1361,10 +1377,10 @@ export function ContactButton({
                     }`}
                     style={{
                       padding: PICK_RING,
-                      top: (H - PICK_SIZE) / 2 + pickSpot(i).rise,
+                      top: (H - pickSize) / 2 + pickSpot(i).rise,
                       left: pickSpot(i).left,
-                      width: PICK_SIZE,
-                      height: PICK_SIZE,
+                      width: pickSize,
+                      height: pickSize,
                     }}
                     initial={false}
                     animate={
@@ -1373,9 +1389,9 @@ export function ContactButton({
                         : attending
                           ? // Quem atende desliza até a ponta esquerda da pill.
                             {
-                              x: R - (pickSpot(i).left + PICK_SIZE / 2),
+                              x: R - (pickSpot(i).left + pickSize / 2),
                               y: -pickSpot(i).rise,
-                              scale: 40 / PICK_SIZE,
+                              scale: 40 / pickSize,
                               opacity: 1,
                             }
                           : { x: 0, y: 0, scale: 0, opacity: 0 }
@@ -1404,7 +1420,7 @@ export function ContactButton({
                     </span>
                     {/* No toque não existe hover para revelar o nome */}
                     {touch && picking && (
-                      <span className="pointer-events-none absolute top-full left-1/2 mt-[5px] -translate-x-1/2 rounded-full bg-white px-[7px] py-[3px] text-[11px] leading-none font-semibold whitespace-nowrap text-ink shadow-[0_2px_10px_rgba(20,22,24,0.16)]">
+                      <span className="pointer-events-none absolute top-full left-1/2 mt-[6px] -translate-x-1/2 rounded-full bg-white px-[9px] py-[4px] text-[12.5px] leading-none font-semibold whitespace-nowrap text-ink shadow-[0_2px_10px_rgba(20,22,24,0.16)]">
                         {consultant.name}
                       </span>
                     )}
@@ -1535,6 +1551,8 @@ export function ContactButton({
                 aria-label={step < FIELDS.length - 1 ? "Continuar" : "Enviar"}
                 tabIndex={ready && view === "form" ? undefined : -1}
                 onClick={next}
+                // Tocar na seta não tira o foco do campo (o teclado não fecha).
+                onPointerDown={(e) => e.preventDefault()}
                 className={`absolute top-[5px] right-[5px] flex size-[38px] cursor-pointer items-center justify-center rounded-full outline-offset-2 ${
                   ready && view === "form" ? "pointer-events-auto" : ""
                 }`}
@@ -1612,7 +1630,7 @@ export function ContactButton({
                 style={{ marginTop: 10 + pickLift }}
                 initial={false}
                 animate={{
-                  left: pickSpot(pickLast).left + PICK_SIZE / 2,
+                  left: pickSpot(pickLast).left + pickSize / 2,
                   scale: nameShown ? 1 : 0,
                   opacity: nameShown ? 1 : 0,
                 }}
@@ -1661,8 +1679,12 @@ export function ContactButton({
                 // Clicável mesmo antes de aparecer: entrar aqui tira o hover da
                 // pill, e é isso que faz o × surgir.
                 // Na escolha em várias linhas, sobe para o canto da grade.
-                style={{ top: -9 - (open && view === "pick" ? pickLift : 0) }}
-                className={`absolute -right-[9px] flex size-[26px] cursor-pointer items-center justify-center rounded-full outline-offset-0 ${
+                style={{
+                  top: -9 - (open && view === "pick" ? pickLift : 0),
+                  // Em grade, afasta do último avatar para não parecer dele.
+                  right: open && view === "pick" && pickRows > 1 ? -30 : -9,
+                }}
+                className={`absolute flex size-[26px] cursor-pointer items-center justify-center rounded-full outline-offset-0 ${
                   ready ? "" : "pointer-events-none"
                 }`}
                 initial={false}

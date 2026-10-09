@@ -189,10 +189,11 @@ encosta de fato no destino.
 
 **Celular.**
 Em tela de toque não existe hover, então: os avatares se dividem em linhas
-iguais conforme a largura disponível (8 consultores viram 4 + 4), o nome fica
+de até 3, com fotos maiores (8 consultores viram 3 + 3 + 2), o nome fica
 sempre visível sob cada foto, o × fica sempre à mostra, o chip se alinha pela
 direita para não sair da tela e os campos usam fonte de 16 px (abaixo disso o
-iOS dá zoom na página ao focar). Na demonstração o botão inteiro é reduzido até
+iOS dá zoom na página ao focar). Ao avançar, o foco passa para o próximo campo
+dentro do próprio toque, para o teclado continuar aberto até o último. Na demonstração o botão inteiro é reduzido até
 caber na largura do aparelho.
 
 **Sombras.**
