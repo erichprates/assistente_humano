@@ -135,6 +135,8 @@ const WAIT_TEXT_LEFT = 53;
 const CLOSE_HINT_MS = 1500;
 // Tempo com a mensagem de quem atende antes de pedir os contatos.
 const WAIT_MS = 2200;
+// No celular o teclado já está aberto nesse momento; a espera é mais curta.
+const WAIT_TOUCH_MS = 1600;
 // Largura da pill no formulário e raio do anel de progresso no avatar.
 const FORM_W = 312;
 const PROGRESS_R = 19;
@@ -509,15 +511,19 @@ export function ContactButton({
   const opened = intro === "expand" || intro === "done";
   // Os avatares entram em cascata; depois disso respondem ao hover na hora.
   const [pickPopped, setPickPopped] = useState(false);
+  const [touch, setTouch] = useState(false);
   const [step, setStep] = useState(0);
   const [lead, setLead] = useState<Lead>({ name: "", email: "", whatsapp: "" });
   const inputs = useRef<(HTMLInputElement | null)[]>([]);
   // Depois da mensagem de quem atende, passa sozinho para o formulário.
   useEffect(() => {
     if (view !== "wait") return;
-    const id = setTimeout(() => setView("form"), WAIT_MS);
+    const id = setTimeout(
+      () => setView("form"),
+      touch ? WAIT_TOUCH_MS : WAIT_MS,
+    );
     return () => clearTimeout(id);
-  }, [view]);
+  }, [view, touch]);
   // O foco acompanha o campo da vez, já com a troca em andamento.
   useEffect(() => {
     if (view !== "form" || !opened) return;
@@ -530,7 +536,6 @@ export function ContactButton({
     return () => clearTimeout(id);
   }, [view, opened]);
   // Sem hover (toque) não há "chegar perto": o × fica sempre à mostra.
-  const [touch, setTouch] = useState(false);
   const [viewportW, setViewportW] = useState(Infinity);
   useEffect(() => {
     setTouch(window.matchMedia("(hover: none)").matches);
@@ -972,6 +977,9 @@ export function ContactButton({
   };
   const settle = (index: number, isClient: boolean) => {
     setChosen(index);
+    // Celular: o teclado só abre dentro de um toque. Focando o campo do nome
+    // já aqui, ele sobe durante a mensagem e o campo chega pronto para digitar.
+    if (touch) inputs.current[0]?.focus({ preventScroll: true });
     setView("wait");
     if (consultants[index]) onConsultant?.(consultants[index], isClient);
   };

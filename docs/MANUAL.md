@@ -194,8 +194,11 @@ maior; os avatares se dividem em linhas
 de até 3, com fotos maiores (8 consultores viram 3 + 3 + 2), o nome fica
 sempre visível sob cada foto, o × fica sempre à mostra, o chip se alinha pela
 direita para não sair da tela e os campos usam fonte de 16 px (abaixo disso o
-iOS dá zoom na página ao focar). Ao avançar, o foco passa para o próximo campo
-dentro do próprio toque, para o teclado continuar aberto até o último. Na demonstração o botão inteiro é reduzido até
+iOS dá zoom na página ao focar). O navegador do celular só abre o teclado dentro
+de um toque; por isso o campo do nome recebe o foco já no toque em "Não" ou no
+consultor (o teclado sobe durante a mensagem de quem atende, que lá dura 1,6 s),
+e ao avançar o foco passa para o próximo campo no próprio toque, mantendo o
+teclado aberto até o último. Na demonstração o botão inteiro é reduzido até
 caber na largura do aparelho.
 
 **Sombras.**
