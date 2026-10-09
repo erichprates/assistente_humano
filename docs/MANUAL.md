@@ -230,6 +230,11 @@ do texto e não deixa trocar essa cor. Os campos usam uma transição de duraç�
 branco. Só vale para o campo já preenchido: a barra de sugestões do teclado e a
 prévia ao passar o mouse na sugestão são do navegador e não mudam.
 
+**Balão de quem atende e o ×.**
+O balão "Diego" sob a pill aparece quando o cursor chega perto do botão, antes
+de encostar. No canto superior direito, que é o caminho até o ×, ele não
+aparece: ali só surge "Fechar", com o cursor já sobre o ×.
+
 **Anel de progresso.**
 O anel vermelho em volta do avatar é um pouco mais espesso que o contorno
 branco (3,5 contra 2) e o cobre por inteiro; com a mesma espessura sobrava um

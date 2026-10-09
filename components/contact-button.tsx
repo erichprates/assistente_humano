@@ -132,6 +132,9 @@ const PICK_CHIP =
   "w-max -translate-x-1/2 rounded-full bg-white shadow-[0_2px_10px_rgba(20,22,24,0.16)] px-[11px] py-[5px] text-[12.5px] leading-none font-semibold whitespace-nowrap text-ink";
 const SWAP_CHIP = `${PICK_CHIP.replace("-translate-x-1/2 ", "")} flex cursor-pointer items-center gap-[5px] outline-offset-2`;
 const WAIT_TEXT_LEFT = 53;
+// Canto superior direito da área do botão em que o cursor está a caminho do ×.
+const CLOSE_ZONE_X = 56;
+const CLOSE_ZONE_Y = 40;
 // Tempo que a oferta de trocar de consultor fica na tela sem ser usada.
 const SWAP_OFFER_MS = 4000;
 // Tempo em repouso até o × aparecer sozinho, para mostrar que dá para fechar.
@@ -511,6 +514,8 @@ export function ContactButton({
   // O chip responde a uma área um pouco maior que o botão, então aparece
   // antes de o cursor encostar na pill e some depois de ele sair.
   const [near, setNear] = useState(false);
+  // Cursor no canto do ×: quem vai fechar não precisa ver quem atende.
+  const [aiming, setAiming] = useState(false);
   const [closeFocused, setCloseFocused] = useState(false);
   const [closeHovered, setCloseHovered] = useState(false);
   const [closeHinted, setCloseHinted] = useState(false);
@@ -673,7 +678,9 @@ export function ContactButton({
   const hovered = phase === "hover";
   // Fora da conversa a pill é o botão com hover; dentro, só os controles.
   const interactive = ready && view === "button";
-  const chip = ready && (closeHovered || (interactive && (near || hovered)));
+  const chip =
+    ready &&
+    (closeHovered || (interactive && (hovered || (near && !aiming))));
   const closeShown =
     ready &&
     (!hovered || direct) &&
@@ -1117,8 +1124,20 @@ export function ContactButton({
         <div
           className="-m-3 inline-block p-3"
           onPointerEnter={() => setNear(true)}
-          onPointerLeave={() => setNear(false)}
-          onPointerMove={track}
+          onPointerLeave={() => {
+            setNear(false);
+            setAiming(false);
+          }}
+          onPointerMove={(e) => {
+            track(e);
+            // Mesma medida em qualquer zoom: a altura da área é H + 2 × PAD.
+            const rect = e.currentTarget.getBoundingClientRect();
+            const unit = rect.height / (H + 2 * PAD) || 1;
+            setAiming(
+              e.clientX > rect.right - CLOSE_ZONE_X * unit &&
+                e.clientY < rect.top + CLOSE_ZONE_Y * unit,
+            );
+          }}
         >
           <motion.div
             ref={layoutRef}
