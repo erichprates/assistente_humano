@@ -224,13 +224,23 @@ function pillPath(w: number, dx: number, dy: number, cx: number, cy: number) {
  * e springs bem soltas perseguem esse carrier: a chegada é suave, mas sobra
  * o balanço longo e de baixa amplitude do original (período ~0.3s).
  */
+// Springs dos textos: soltas (balanço longo do original) e firmes (campos do
+// formulário, onde o texto digitado não pode ficar tremendo).
+const LOOSE_Y = { stiffness: 450, damping: 6 };
+const LOOSE_ROTATE = { stiffness: 320, damping: 7 };
+const STEADY_Y = { stiffness: 450, damping: 34 };
+const STEADY_ROTATE = { stiffness: 320, damping: 30 };
+
 function useLabel({
   away,
   awayY,
   awayRotate,
   enterDelay,
   exitDelay,
+  steady = false,
 }: {
+  /** Assenta rápido, sem o balanço longo: para campos em que se digita. */
+  steady?: boolean;
   away: boolean;
   awayY: number;
   awayRotate: number;
@@ -250,14 +260,14 @@ function useLabel({
     return () => controls.stop();
   }, [p, away, enterDelay, exitDelay]);
 
-  const y = useSpring(useTransform(p, [0, 1], [0, awayY]), {
-    stiffness: 450,
-    damping: 6,
-  });
-  const rotate = useSpring(useTransform(p, [0, 1], [0, awayRotate]), {
-    stiffness: 320,
-    damping: 7,
-  });
+  const y = useSpring(
+    useTransform(p, [0, 1], [0, awayY]),
+    steady ? STEADY_Y : LOOSE_Y,
+  );
+  const rotate = useSpring(
+    useTransform(p, [0, 1], [0, awayRotate]),
+    steady ? STEADY_ROTATE : LOOSE_ROTATE,
+  );
   // Pelo carrier (não pela spring) para o balanço não reacender o texto.
   const opacity = useTransform(p, [0.5, 0.95], [1, 0]);
 
@@ -937,6 +947,7 @@ export function ContactButton({
     awayRotate: (view === "done" || step > i ? 8 : -8) * tilt(fieldWidth),
     enterDelay: 0.16,
     exitDelay: 0,
+    steady: true,
   });
   const fieldStyles = [
     useLabel(fieldMotion(0)),

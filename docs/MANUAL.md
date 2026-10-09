@@ -27,7 +27,7 @@ O fluxo completo, na ordem em que o visitante vê:
 | 5 | Clique | A pill pergunta "Você já é cliente?" com os botões **Sim** e **Não**. |
 | 6a | Sim | A pill some e 8 avatares entram em cascata, com "Escolha seu consultor" em cima e o nome sob o avatar apontado. |
 | 6b | Não | Vai direto para o consultor de plantão. |
-| 7 | Mensagem | "Diego já vai te atender" (plantão) ou "Já vou tentar contato com o/a …" (outro consultor). Fica 2,2 s na tela. |
+| 7 | Mensagem | "Diego já vai te atender" (plantão) ou "Já vou tentar contato com o/a …" (outro consultor). Fica 2,2 s na tela (1,6 s no celular, onde o teclado já sobe nesse momento). |
 | 8 | Contatos | Um campo por vez dentro da pill: nome, e-mail e WhatsApp. O contorno do avatar vai se preenchendo de vermelho como progresso. Campo inválido faz a pill balançar. |
 | 9 | Fim | A seta vira um ✓ e entra "Obrigado, {primeiro nome}!". |
 
@@ -41,7 +41,11 @@ Em qualquer etapa:
   sabe que há um consultor: o botão volta direto como "Falar agora!" com o chip
   de quem atende, e fica assim.
 - **Recolher sozinho:** no estado inicial, 5 s sem o cursor por perto fazem o
-  botão se fechar e ir para o canto.
+  botão se fechar e ir para o canto (10 s depois de uma reabertura).
+
+No celular, onde não existe hover, a etapa 4 acontece sozinha: 1,8 s depois de
+abrir, o botão passa para "Falar agora!" e fica assim. Os consultores aparecem
+em linhas de 3, com fotos maiores e o nome sempre visível.
 
 ---
 
@@ -156,7 +160,9 @@ frames: um *carrier* curto (0,32 s) leva o texto até o lugar e springs bem
 soltas (`stiffness 450, damping 6` para a posição; `320 / 7` para a rotação)
 perseguem esse carrier. O erro em relação às medições caiu para cerca de um
 quarto do melhor resultado com spring simples. A opacidade segue o carrier, e
-não a spring, para o balanço não reacender o texto que saiu.
+não a spring, para o balanço não reacender o texto que saiu. Os campos do
+formulário usam a mesma entrada, mas com springs firmes (`450 / 34`): com o
+balanço longo, as primeiras letras digitadas ficavam tremendo.
 
 **Preenchimento que cresce a partir do ponto.**
 O ponto vermelho é um elemento que anima `top/right/width/height` até cobrir a
@@ -248,7 +254,9 @@ Camadas, de baixo para cima:
 | Círculo com avatar antes de expandir | 850 ms |
 | × aparece sozinho | 1500 ms após abrir |
 | Recolhe sozinho | 5000 ms sem interação |
-| Mensagem de quem atende | 2200 ms |
+| Mensagem de quem atende | 2200 ms (celular: 1600 ms) |
+| Celular: passa sozinho para "Falar agora!" | 1800 ms após abrir |
+| Recolhe sozinho após reabertura | 10 000 ms |
 | Saída do hover (pill escura cobre) | 510 ms |
 | Recolher ao fechar | 540 ms |
 | Spring de largura / seguir cursor | `stiffness 220, damping 21` |
@@ -286,6 +294,8 @@ scripts/publish-pages.sh publicação no GitHub Pages
 - **Fundo:** é um print estático da página de estoque, não o site.
 - **Posição:** o botão está no centro da tela; a posição final no site ainda
   não foi definida.
+- **Tamanho:** a demonstração amplia o botão (1,5× no computador, ajustado à
+  largura no celular). O componente em si tem 48 px de altura.
 
 **Limitações conhecidas**
 
