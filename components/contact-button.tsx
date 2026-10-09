@@ -976,6 +976,13 @@ export function ContactButton({
     if (attendant) onLead?.(lead, attendant);
   };
 
+  // Voltar ao campo anterior para corrigir; o que já foi digitado continua lá.
+  const back = () => {
+    if (view !== "form" || step === 0) return;
+    inputs.current[step - 1]?.focus({ preventScroll: true });
+    setStep(step - 1);
+  };
+
   // Celular: como não há hover, pouco depois de abrir o botão passa sozinho
   // para o "Falar agora!" e fica assim (ver `direct`), sem voltar à 1ª frase.
   useEffect(() => {
@@ -1740,6 +1747,61 @@ export function ContactButton({
                 }}
               >
                 <div className={PICK_CHIP}>{consultants[pickLast]?.name}</div>
+              </motion.div>
+
+              {/* Voltar: aparece embaixo a partir do segundo campo */}
+              <motion.div
+                className={`absolute top-full left-1/2 ${
+                  collapsed ? "hidden" : ""
+                }`}
+                style={{ marginTop: 10 }}
+                initial={false}
+                animate={
+                  open && view === "form" && step > 0
+                    ? { scale: 1, opacity: 1 }
+                    : { scale: 0, opacity: 0 }
+                }
+                transition={
+                  view === "form" && step > 0
+                    ? {
+                        type: "spring",
+                        stiffness: 380,
+                        damping: 22,
+                        delay: 0.18,
+                        opacity: { duration: 0.14, delay: 0.18 },
+                      }
+                    : { duration: 0.14 }
+                }
+              >
+                <motion.button
+                  type="button"
+                  tabIndex={ready && view === "form" && step > 0 ? undefined : -1}
+                  onClick={back}
+                  // Tocar em voltar não tira o foco do campo (o teclado não fecha).
+                  onPointerDown={(e) => e.preventDefault()}
+                  className={`${PICK_CHIP} flex cursor-pointer items-center gap-[5px] outline-offset-2 ${
+                    ready && view === "form" && step > 0
+                      ? "pointer-events-auto"
+                      : ""
+                  }`}
+                  whileHover={{ scale: 1.06 }}
+                  whileTap={{ scale: 0.94 }}
+                  transition={{ type: "spring", stiffness: 420, damping: 22 }}
+                >
+                  <svg
+                    aria-hidden
+                    viewBox="0 0 12 12"
+                    className="size-[11px]"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.75"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M10.5 6h-9M5 2.5 1.5 6 5 9.5" />
+                  </svg>
+                  Voltar
+                </motion.button>
               </motion.div>
             </motion.div>
 

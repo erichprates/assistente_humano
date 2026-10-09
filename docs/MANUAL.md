@@ -315,8 +315,10 @@ scripts/publish-pages.sh publicação no GitHub Pages
 
 **Limitações conhecidas**
 
-- Não há como voltar a uma etapa anterior (corrigir a resposta ou um campo já
-  preenchido); só fechando.
+- No formulário, o botão branco **Voltar** (embaixo da pill, a partir do
+  segundo campo) retorna ao campo anterior com o que já foi digitado. Ainda não
+  há como voltar às etapas antes do formulário (a resposta "já é cliente?" e a
+  escolha do consultor), nem corrigir depois de enviar.
 - A conversa não é salva: recarregar a página recomeça do zero.
 - A bolinha minimizada pousa no canto inferior direito, onde o site hoje tem o
   mascote. Os dois vão se sobrepor.
