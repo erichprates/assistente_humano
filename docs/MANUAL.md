@@ -318,7 +318,8 @@ scripts/publish-pages.sh publicação no GitHub Pages
 - No formulário, o botão branco **Voltar** (embaixo da pill, a partir do
   segundo campo) retorna ao campo anterior com o que já foi digitado.
 - Quem respondeu que **já é cliente** pode trocar de consultor durante o
-  formulário: tocar no avatar de quem atende mostra **Escolher outro
+  formulário: um selo branco com ícone de recarregar, no canto superior
+  esquerdo do avatar, indica isso; tocar no avatar mostra **Escolher outro
   consultor** (some sozinho em 4 s); tocando nele, os avatares voltam para
   nova escolha e o formulário continua do campo em que estava. Quem respondeu
   "Não" é sempre atendido pelo plantão e não tem essa opção.

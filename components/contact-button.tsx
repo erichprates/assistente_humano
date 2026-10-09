@@ -1642,6 +1642,41 @@ export function ContactButton({
                 />
               </motion.svg>
 
+              {/* Selo no canto do avatar: indica que dá para trocar de consultor */}
+              <motion.span
+                aria-hidden
+                className="pointer-events-none absolute -top-[3px] -left-[3px] flex size-[18px] items-center justify-center rounded-full bg-white text-ink shadow-[0_2px_6px_rgba(20,22,24,0.22)]"
+                initial={false}
+                animate={
+                  open && view === "form" && isClient
+                    ? { scale: 1, opacity: 1 }
+                    : { scale: 0, opacity: 0 }
+                }
+                transition={
+                  view === "form" && isClient
+                    ? {
+                        type: "spring",
+                        stiffness: 420,
+                        damping: 18,
+                        delay: 0.45,
+                        opacity: { duration: 0.12, delay: 0.45 },
+                      }
+                    : { duration: 0.12 }
+                }
+              >
+                <svg
+                  viewBox="0 0 12 12"
+                  className="size-[11px]"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M10 6a4 4 0 1 1-1.2-2.85M10 1.75V3.6H8.15" />
+                </svg>
+              </motion.span>
+
               {/* Recorte próprio: os campos existem mesmo fora do formulário e
                   são mais largos que a pill recolhida; sem isto alargam a página
                   (no celular o navegador reduz o zoom de tudo). É `clip` e não
