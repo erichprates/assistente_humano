@@ -332,12 +332,78 @@ scripts/publish-pages.sh publicação no GitHub Pages
   para "Falar agora!" e fica assim até ser tocado ou se recolher. O toque abre
   a pergunta direto.
 
-**Próxima fase (a detalhar)**
+---
 
-- Componente do atendente, com mais funções.
-- Conexão com o CRM (destino dos contatos e do consultor escolhido).
-- Incorporação no site.
-- Escala real de plantão.
+## 6. Próxima fase: de protótipo a produto (proposta para discutir)
+
+> Nada aqui está decidido nem construído. É a proposta levantada em 09/10/2026
+> para servir de base à conversa.
+
+A ideia: o botão virar um componente com área administrativa (escala dos
+consultores, horário em que aparece, quando entra na tela) e que se aplique com
+facilidade em qualquer site.
+
+### 6.1 As três peças
+
+**1. Widget embutível.** O botão empacotado em um único arquivo de script, que
+o site instala colando uma linha, como um pixel ou um chat:
+
+```html
+<script src="https://seu-dominio/widget.js" data-conta="kiko-autos" async></script>
+```
+
+Funciona em qualquer site (WordPress, Wix, site próprio), sem depender de
+Next.js nem de React do lado de lá. O widget se isola do CSS do site para um
+não quebrar o outro.
+
+**2. Painel admin.** Aplicação com login onde se define:
+
+- consultores (foto, nome, WhatsApp) e a escala de plantão por dia e horário;
+- o horário em que o botão aparece, e o que acontece fora dele;
+- quando ele entra na tela (segundos, rolagem, páginas específicas), textos e
+  cor;
+- os contatos recebidos.
+
+**3. API no meio.** O widget pergunta "quem está de plantão agora e qual a
+configuração desta conta?" e envia o contato no fim. É aqui que entram o CRM e
+o aviso ao consultor.
+
+### 6.2 O que muda no código atual
+
+O protótipo já recebe por configuração quase tudo isso (`consultants`, textos,
+`startDelayMs`, `autoMinimizeMs`). Falta a configuração vir do painel.
+
+- **Plantão:** hoje é sempre o primeiro da lista; passa a vir da escala.
+- **Contato:** hoje `onLead` só escreve no console; passa a enviar para a API.
+- **Empacotamento:** o componente usa recursos do Next (`next/image`,
+  `next/font`) que precisam ser trocados por equivalentes simples. A animação
+  não muda.
 
 Os pontos de encaixe já existem: `onConsultant`, `onLead` e `onClose` são onde
-essas integrações se ligam, e `consultants` é por onde a escala entra.
+as integrações se ligam, e `consultants` é por onde a escala entra.
+
+### 6.3 Várias contas
+
+Construindo desde o início para várias contas (cada site com seu
+identificador), o mesmo sistema atende a Kiko Autos e depois outros clientes,
+cada um com sua escala e seus textos.
+
+### 6.4 Ordem sugerida
+
+1. Widget embutível com a configuração em um arquivo, para colocar no site da
+   Kiko e validar em uso real.
+2. API com escala e contatos.
+3. Painel admin.
+
+Assim o cliente vê o botão funcionando no site antes de o painel existir.
+
+### 6.5 Decisões em aberto
+
+- **CRM:** qual é o da Kiko.
+- **Aviso ao consultor:** como ele fica sabendo do contato (WhatsApp, e-mail,
+  o próprio CRM).
+- **Fora do horário:** o botão some ou continua coletando contato.
+- **Posição no site:** onde o botão fica, e como convive com o mascote no
+  canto inferior direito.
+- **Privacidade (LGPD):** texto de consentimento no formulário e onde os dados
+  ficam guardados.
