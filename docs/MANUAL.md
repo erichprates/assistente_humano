@@ -316,9 +316,14 @@ scripts/publish-pages.sh publicação no GitHub Pages
 **Limitações conhecidas**
 
 - No formulário, o botão branco **Voltar** (embaixo da pill, a partir do
-  segundo campo) retorna ao campo anterior com o que já foi digitado. Ainda não
-  há como voltar às etapas antes do formulário (a resposta "já é cliente?" e a
-  escolha do consultor), nem corrigir depois de enviar.
+  segundo campo) retorna ao campo anterior com o que já foi digitado.
+- Quem respondeu que **já é cliente** pode trocar de consultor durante o
+  formulário: tocar no avatar de quem atende mostra **Escolher outro
+  consultor** (some sozinho em 4 s); tocando nele, os avatares voltam para
+  nova escolha e o formulário continua do campo em que estava. Quem respondeu
+  "Não" é sempre atendido pelo plantão e não tem essa opção.
+- Ainda não há como voltar à resposta "já é cliente?", nem corrigir depois de
+  enviar.
 - A conversa não é salva: recarregar a página recomeça do zero.
 - A bolinha minimizada pousa no canto inferior direito, onde o site hoje tem o
   mascote. Os dois vão se sobrepor.

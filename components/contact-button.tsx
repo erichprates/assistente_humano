@@ -130,7 +130,10 @@ const PICK_INSET = 3;
 const PICK_RING = 2;
 const PICK_CHIP =
   "w-max -translate-x-1/2 rounded-full bg-white shadow-[0_2px_10px_rgba(20,22,24,0.16)] px-[11px] py-[5px] text-[12.5px] leading-none font-semibold whitespace-nowrap text-ink";
+const SWAP_CHIP = `${PICK_CHIP.replace("-translate-x-1/2 ", "")} flex cursor-pointer items-center gap-[5px] outline-offset-2`;
 const WAIT_TEXT_LEFT = 53;
+// Tempo que a oferta de trocar de consultor fica na tela sem ser usada.
+const SWAP_OFFER_MS = 4000;
 // Tempo em repouso até o × aparecer sozinho, para mostrar que dá para fechar.
 const CLOSE_HINT_MS = 1500;
 // Tempo com a mensagem de quem atende antes de pedir os contatos.
@@ -513,6 +516,15 @@ export function ContactButton({
   const [closeHinted, setCloseHinted] = useState(false);
   const [view, setView] = useState<View>("button");
   const [chosen, setChosen] = useState(0);
+  // Só quem já é cliente escolheu o consultor, e só ele pode trocar.
+  const [isClient, setIsClient] = useState(false);
+  // Tocar em quem atende oferece "Escolher outro consultor" por alguns segundos.
+  const [swapOffer, setSwapOffer] = useState(false);
+  useEffect(() => {
+    if (!swapOffer) return;
+    const id = setTimeout(() => setSwapOffer(false), SWAP_OFFER_MS);
+    return () => clearTimeout(id);
+  }, [swapOffer]);
   const [pickHover, setPickHover] = useState<number | null>(null);
   // Último avatar apontado: mantém nome e posição enquanto o chip some.
   const [pickLast, setPickLast] = useState(0);
@@ -964,6 +976,7 @@ export function ContactButton({
       inputs.current[step]?.focus({ preventScroll: true });
       return;
     }
+    setSwapOffer(false);
     if (step < FIELDS.length - 1) {
       // Foco no próximo campo já dentro do toque/Enter: no celular é isso
       // que mantém o teclado aberto de um campo para o outro.
@@ -979,6 +992,7 @@ export function ContactButton({
   // Voltar ao campo anterior para corrigir; o que já foi digitado continua lá.
   const back = () => {
     if (view !== "form" || step === 0) return;
+    setSwapOffer(false);
     inputs.current[step - 1]?.focus({ preventScroll: true });
     setStep(step - 1);
   };
@@ -1000,11 +1014,22 @@ export function ContactButton({
   };
   const settle = (index: number, isClient: boolean) => {
     setChosen(index);
-    // Celular: o teclado só abre dentro de um toque. Focando o campo do nome
+    setIsClient(isClient);
+    // Celular: o teclado só abre dentro de um toque. Focando o campo da vez
     // já aqui, ele sobe durante a mensagem e o campo chega pronto para digitar.
-    if (touch) inputs.current[0]?.focus({ preventScroll: true });
+    if (touch) inputs.current[step]?.focus({ preventScroll: true });
     setView("wait");
     if (consultants[index]) onConsultant?.(consultants[index], isClient);
+  };
+
+  // Trocar de consultor: volta à escolha; o que já foi digitado continua lá.
+  const reselect = () => {
+    if (view !== "form" || !isClient) return;
+    setSwapOffer(false);
+    inputs.current[step]?.blur();
+    setPickHover(null);
+    setPickPopped(false);
+    setView("pick");
   };
 
   const filled = phase === "hover" || phase === "leaving";
@@ -1440,13 +1465,24 @@ export function ContactButton({
                   open &&
                   (view === "wait" || view === "form" || view === "done") &&
                   i === chosen;
+                // Quem já é cliente pode tocar em quem atende para trocar.
+                const swappable =
+                  ready && attending && view === "form" && isClient;
                 return (
                   <motion.button
                     key={i}
                     type="button"
-                    aria-label={consultant.name}
-                    tabIndex={ready && picking ? undefined : -1}
-                    onClick={() => settle(i, true)}
+                    tabIndex={(ready && picking) || swappable ? undefined : -1}
+                    aria-label={
+                      swappable ? "Escolher outro consultor" : consultant.name
+                    }
+                    onClick={() =>
+                      swappable ? setSwapOffer((o) => !o) : settle(i, true)
+                    }
+                    // Tocar em quem atende não tira o foco do campo.
+                    onPointerDown={
+                      swappable ? (e) => e.preventDefault() : undefined
+                    }
                     onPointerEnter={() => {
                       setPickHover(i);
                       setPickLast(i);
@@ -1460,7 +1496,9 @@ export function ContactButton({
                     }}
                     onBlur={() => setPickHover((h) => (h === i ? null : h))}
                     className={`absolute cursor-pointer rounded-full bg-white shadow-[0_2px_10px_rgba(20,22,24,0.16)] outline-offset-2 ${
-                      ready && picking ? "pointer-events-auto" : ""
+                      (ready && picking) || swappable
+                        ? "pointer-events-auto"
+                        : ""
                     }`}
                     style={{
                       padding: PICK_RING,
@@ -1488,8 +1526,20 @@ export function ContactButton({
                             }
                           : { x: 0, y: 0, scale: 0, opacity: 0 }
                     }
-                    whileHover={picking ? { scale: 1.16, y: -3 } : undefined}
-                    whileTap={picking ? { scale: 0.92 } : undefined}
+                    whileHover={
+                      picking
+                        ? { scale: 1.16, y: -3 }
+                        : swappable
+                          ? { scale: (40 / pickSize) * 1.08 }
+                          : undefined
+                    }
+                    whileTap={
+                      picking
+                        ? { scale: 0.92 }
+                        : swappable
+                          ? { scale: (40 / pickSize) * 0.94 }
+                          : undefined
+                    }
                     transition={
                       picking
                         ? {
@@ -1749,6 +1799,59 @@ export function ContactButton({
                 <div className={PICK_CHIP}>{consultants[pickLast]?.name}</div>
               </motion.div>
 
+              {/* Trocar de consultor: aparece sob quem atende ao tocar nele */}
+              <motion.div
+                className={`absolute top-full left-0 origin-top-left ${
+                  collapsed ? "hidden" : ""
+                }`}
+                style={{ marginTop: 10 }}
+                initial={false}
+                animate={
+                  open && view === "form" && swapOffer
+                    ? { scale: 1, opacity: 1 }
+                    : { scale: 0, opacity: 0 }
+                }
+                transition={
+                  swapOffer
+                    ? {
+                        type: "spring",
+                        stiffness: 420,
+                        damping: 22,
+                        opacity: { duration: 0.12 },
+                      }
+                    : { duration: 0.14 }
+                }
+              >
+                <motion.button
+                  type="button"
+                  tabIndex={ready && view === "form" && swapOffer ? undefined : -1}
+                  onClick={reselect}
+                  onPointerDown={(e) => e.preventDefault()}
+                  className={`${SWAP_CHIP} ${
+                    ready && view === "form" && swapOffer
+                      ? "pointer-events-auto"
+                      : ""
+                  }`}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.94 }}
+                  transition={{ type: "spring", stiffness: 420, damping: 22 }}
+                >
+                  <svg
+                    aria-hidden
+                    viewBox="0 0 12 12"
+                    className="size-[11px]"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.6"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M1.5 4h9M8 1.5 10.5 4 8 6.5M10.5 8h-9M4 5.5 1.5 8 4 10.5" />
+                  </svg>
+                  Escolher outro consultor
+                </motion.button>
+              </motion.div>
+
               {/* Voltar: aparece embaixo a partir do segundo campo */}
               <motion.div
                 className={`absolute top-full left-1/2 ${
@@ -1757,7 +1860,7 @@ export function ContactButton({
                 style={{ marginTop: 10 }}
                 initial={false}
                 animate={
-                  open && view === "form" && step > 0
+                  open && view === "form" && step > 0 && !swapOffer
                     ? { scale: 1, opacity: 1 }
                     : { scale: 0, opacity: 0 }
                 }
